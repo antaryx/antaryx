@@ -42,7 +42,7 @@ Operating in the void between defensive architecture and offensive exploitation.
 Establish a secure handshake via encrypted channels or monitor active training nodes:
 
 *   **Secure Comm:** <code>[ antaryx@proton.me ](mailto:antaryx@proton.me)</code>
-*   **HackTheBox:** <code>[ /network/htb/antaryx ](#)</code>
+*   **HackTheBox:** <code>[ /network/htb/antaryx ](https://app.hackthebox.com/users/3514431)</code>
 *   **TryHackMe:** <code>[ /network/thm/antaryx ](https://tryhackme.com/p/antaryx)</code>
 
 <br>
