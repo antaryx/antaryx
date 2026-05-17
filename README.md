@@ -43,7 +43,7 @@ Establish a secure handshake via encrypted channels or monitor active training n
 
 *   **Secure Comm:** <code>[ antaryx@proton.me ](mailto:antaryx@proton.me)</code>
 *   **HackTheBox:** <code>[ /network/htb/antaryx ](#)</code>
-*   **TryHackMe:** <code>[ /network/thm/antaryx ](#)</code>
+*   **TryHackMe:** <code>[ /network/thm/antaryx ](https://tryhackme.com/p/antaryx)</code>
 
 <br>
 
