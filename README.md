@@ -1,34 +1,53 @@
 <div align="center">
-  <img src="./antaryx_banner.png" alt="Antaryx Header" width="100%">
+  <img src="antaryx_banner.png" alt="Antaryx Header" width="100%">
 </div>
 
 <br>
 
-> _Null routing noise. Blue team logic, Red team mechanics._
+<div align="center">
+  <p><i>"The most dangerous vulnerabilities are the ones that cast no shadow."</i></p>
+</div>
 
 <br>
 
-### ↳ `/sys/core_focus`
-I operate in the hybrid space between defensive architecture and offensive vulnerability research. My work focuses on building adaptive security solutions and understanding exploitation mechanics to neutralize them.
-
-*   **Blue Team (Defense):** Digital Forensics, Threat Hunting, Log Analysis, and Risk Management.
-*   **Red Team (Offense):** Vulnerability Research, Custom Payload Engineering, and Stealth Automation.
-*   **Architecture:** WSL/Linux Environments, Containerized Tooling, and Secure Deployments.
+### <code>>_ whoami && id</code>
+Operating in the void between defensive architecture and offensive exploitation. **Antaryx** is a hybrid security research node dedicated to stealth automation, digital forensics, and advanced payload engineering. I do not just monitor the perimeter; I become the noise to understand the threat.
 
 ---
 
-### ↳ `/usr/bin/stack`
-`Python` • `Bash` • `Linux` • `Docker` • `Django` • `Git`
+### <code>>_ cat /etc/operational_matrix.conf</code>
+
+**[ DEFENSE_VECTORS // BLUE TEAM ]**
+*   **Anomaly Detection:** Parsing the void for unauthorized telemetry and anomalous behaviors.
+*   **Forensic Architecture:** Reconstructing fragmented digital footprints and auditing access logs.
+*   **System Hardening:** Architecting impenetrable WSL/Linux environments and secure containerized infrastructure.
+
+**[ OFFENSE_VECTORS // RED TEAM ]**
+*   **Vulnerability Research:** Dissecting logic flaws, misconfigurations, and system vulnerabilities.
+*   **Payload Engineering:** Crafting silent, adaptive execution chains.
+*   **Stealth Operations:** Bypassing static analysis through behavioral mutation and footprint reduction.
 
 ---
 
-### ↳ `/var/log/transmissions`
-*   **Secure Comm:** `antaryx@proton.me`
-*   **HackTheBox:** `[antaryx](link-to-your-htb-profile)`
-*   **TryHackMe:** `[antaryx](link-to-your-thm-profile)`
+### <code>>_ env | grep CORE_STACK</code>
+<div align="center">
+  <br>
+  <code>Python</code> ⠂ <code>Docker</code> ⠂ <code>Bash</code> ⠂ <code>Django</code> ⠂ <code>Linux/WSLg</code> ⠂ <code>Git</code>
+  <br><br>
+</div>
+
+---
+
+### <code>>_ netstat -ano | grep ESTABLISHED</code>
+Establish a secure handshake via encrypted channels or monitor active training nodes:
+
+*   **Secure Comm:** <code>[ antaryx@proton.me ](mailto:antaryx@proton.me)</code>
+*   **HackTheBox:** <code>[ /network/htb/antaryx ](#)</code>
+*   **TryHackMe:** <code>[ /network/thm/antaryx ](#)</code>
 
 <br>
 
 <div align="center">
-  <img src="./antaryx_logo.png" alt="Antaryx Logo" width="120px">
+  <img src="antaryx_logo.png" alt="Antaryx Logo" width="80px">
+  <p><code>[ SIGNAL LOST // EOF ]</code></p>
 </div>
