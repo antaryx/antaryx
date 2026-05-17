@@ -47,7 +47,16 @@ Establish a secure handshake via encrypted channels or monitor active training n
 
 <br>
 
+---
+
+### <code>>_ exit</code>
+
+<br>
+
 <div align="center">
-  <img src="antaryx_logo.png" alt="Antaryx Logo" width="80px">
-  <p><code>[ SIGNAL LOST // EOF ]</code></p>
+  <code>[ IDENTITY: VERIFIED ]</code><br>
+  <code>[ PGP FINGERPRINT: UNAVAILABLE ]</code><br>
+  <br>
+  <p><code>Connection to 127.0.0.1 closed.</code></p>
+  <p><code>_</code></p>
 </div>
