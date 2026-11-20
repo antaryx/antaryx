@@ -1,70 +1,116 @@
 #!/usr/bin/env python3
-"""Draws every card of the Antaryx profile README as an animated SVG (no third-party widget services, nothing runs in a viewer's browser
-except CSS/SMIL animation inside <img>). Standard library only.
+"""Draws every card of the Antaryx profile README as an animated SVG: no third-party widget services, no trackers, no JavaScript.
+Python standard library only (the font subsets are committed in assets/fonts and embedded as data URIs).
 
-    python3 scripts/render_cards.py            # writes ./cards/*.svg
+    python3 scripts/render_cards.py            # writes cards/<name>.svg (dark) and cards/<name>-light.svg
 
-Live data comes from the public GitHub API (plumbline: version, commit count, weekly commit activity, check counts from its README). If the API
-is unreachable the cards fall back to the last known values below, so the script never produces a broken card.
-Design: the Antaryx desktop palette (Base #0b0f12, Blue #6aa8ff, Cyan #5ccfe6, Text #e6edf3) with one red star (Antares), the Scorpius constellation of the avatar and banner.
-Reduced-motion visitors keep the gentle animation (see STYLE). Every base style shows the FINAL picture; animations only start from "hidden" (fill-mode: backwards), so a renderer that ignores animation
-still draws a complete card.
+Live, public data (no token): plumbline's version, commits and weekly activity; the contribution calendar (the star map); the newest CISA
+"Known Exploited Vulnerabilities" (the threat feed). If a source is unreachable the card falls back to the last known values, so the script
+never writes a broken card. Everything fetched from outside is reduced to printable ASCII and length-limited before it is drawn.
+Design: the Antaryx desktop palette, the Scorpius scorpion of the avatar, one red star (Antares). Every base style shows the FINAL picture;
+animations start from "hidden" (fill-mode: backwards), so a renderer that ignores animation still draws a complete card. Reduced motion drops
+the sweeping and sliding movement but keeps the gentle animation (twinkle, fade, drawing, typing).
 """
+import base64
+import datetime
 import html
 import json
+import math
 import os
 import pathlib
 import re
+import sys
 import time
 import urllib.request
 
-OUT = pathlib.Path(__file__).resolve().parent.parent / "cards"
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import scorpion  # noqa: E402
+
+OUT = ROOT / "cards"
 OUT.mkdir(parents=True, exist_ok=True)
-
-BG0, BG1, PANEL, EDGE = "#0b0f12", "#151b21", "#0f1418", "#2a3b52"
-VIOLET, LILAC, SILVER, TEXT, DIM, RED = "#6aa8ff", "#5ccfe6", "#e6edf3", "#e6edf3", "#9aa7b4", "#ff6b81"
-MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
 OWNER = "antaryx"
+W = 900            # every card is drawn 900 wide (the README column is about 870 px): text is shown at about its own size
+HALF = 446         # two cards side by side
 
-# ------------------------------------------------------------------ live data (public API, no token)
-FALLBACK = {"version": "v2.0.1", "commits": 115, "stars": 0, "checks": 112, "modules": 11, "weeks": []}
+DARK = dict(name="dark", bg0="#0b0f12", bg1="#151b21", panel="#0f1418", edge="#2a3b52", text="#e6edf3", dim="#9aa7b4", faint="#6b7785",
+            blue="#6aa8ff", cyan="#5ccfe6", red="#ff6b81", green="#7ee787", yellow="#f2cc60", star="#eef6ff", glow="#d7f4fb",
+            plate="#17202a", plate_hi="#2d5f94", wm0="#5a98f0", wm2="#ffffff", rain=".13", scanop=".10")
+LIGHT = dict(name="light", bg0="#ffffff", bg1="#e8f0f9", panel="#f3f7fb", edge="#b4c8de", text="#0f1720", dim="#44566a", faint="#6b7d90",
+             blue="#0a58c9", cyan="#00798c", red="#cf2147", green="#16743a", yellow="#9a6700", star="#0a58c9", glow="#9cc4f5",
+             plate="#dde9f6", plate_hi="#8fb8ec", wm0="#0a58c9", wm2="#0f1720", rain=".10", scanop=".12")
+P = DARK
+
+FONT_FILES = {400: ROOT / "assets/fonts/PlexMono-Regular.subset.woff2", 600: ROOT / "assets/fonts/PlexMono-SemiBold.subset.woff2"}
+CW = 0.6           # IBM Plex Mono: every glyph is 0.6 em wide, so text widths are exact
 
 
-def hdrs():
-    h = {"User-Agent": "antaryx-profile-cards", "Accept": "application/vnd.github+json"}
-    if os.environ.get("GITHUB_TOKEN"):
+def font_css():
+    out = []
+    for wt, f in FONT_FILES.items():
+        if f.exists():
+            out.append("@font-face{font-family:'AX Mono';font-weight:%d;src:url(data:font/woff2;base64,%s) format('woff2')}" % (wt, base64.b64encode(f.read_bytes()).decode()))
+    return "".join(out)
+
+
+FONTS = font_css()
+MONO = "'AX Mono','IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace"
+
+# ------------------------------------------------------------------ live data
+LAST = {"version": "v2.0.1", "commits": 115, "stars": 0, "checks": 112, "modules": 11, "weeks": [], "days": [], "total": 19, "kev": []}
+
+
+def get(url, accept="application/json", timeout=25):
+    h = {"User-Agent": "antaryx-profile-cards", "Accept": accept}
+    if os.environ.get("GITHUB_TOKEN") and "api.github.com" in url:
         h["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    return h
+    with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=timeout) as r:
+        return r.status, r.read(), r.headers
 
 
-def api(path):
-    req = urllib.request.Request("https://api.github.com" + path, headers=hdrs())
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return r.status, json.load(r), r.headers
+def ascii_clean(s, n):
+    s = re.sub(r"[^\x20-\x7e]", "", str(s)).strip()
+    return (s[: n - 1] + "~") if len(s) > n else s
 
 
 def live():
-    d = dict(FALLBACK)
+    d = dict(LAST)
     try:
-        d["version"] = api("/repos/%s/plumbline/releases/latest" % OWNER)[1]["tag_name"]
-        d["stars"] = api("/repos/%s/plumbline" % OWNER)[1]["stargazers_count"]
-        _, _, h = api("/repos/%s/plumbline/commits?per_page=1" % OWNER)
+        d["version"] = json.loads(get("https://api.github.com/repos/%s/plumbline/releases/latest" % OWNER)[1])["tag_name"]
+        d["stars"] = json.loads(get("https://api.github.com/repos/%s/plumbline" % OWNER)[1])["stargazers_count"]
+        _, _, h = get("https://api.github.com/repos/%s/plumbline/commits?per_page=1" % OWNER)
         m = re.search(r'page=(\d+)>; rel="last"', h.get("Link", ""))
-        if m:
-            d["commits"] = int(m.group(1))
-        raw = urllib.request.urlopen(urllib.request.Request("https://raw.githubusercontent.com/%s/plumbline/main/README.md" % OWNER,
-                                                            headers={"User-Agent": "antaryx-profile-cards"}), timeout=20).read().decode("utf-8", "ignore")
+        if m: d["commits"] = int(m.group(1))
+        raw = get("https://raw.githubusercontent.com/%s/plumbline/main/README.md" % OWNER, "text/plain")[1].decode("utf-8", "ignore")
         m = re.search(r"\*\*(\d+) checks .{1,6} (\d+) modules", raw)
-        if m:
-            d["checks"], d["modules"] = int(m.group(1)), int(m.group(2))
+        if m: d["checks"], d["modules"] = int(m.group(1)), int(m.group(2))
         for _ in range(5):   # the statistics endpoint answers 202 (and no data) while GitHub computes them
-            st, w, _ = api("/repos/%s/plumbline/stats/commit_activity" % OWNER)
+            st, body, _ = get("https://api.github.com/repos/%s/plumbline/stats/commit_activity" % OWNER)
+            w = json.loads(body) if body else []
             if st == 200 and isinstance(w, list) and w:
                 d["weeks"] = [x["total"] for x in w]
                 break
             time.sleep(4)
     except Exception as e:  # noqa: BLE001
-        print("live data unavailable, using the last known values:", e)
+        print("plumbline data unavailable, last known values used:", e)
+    try:   # the contribution calendar, as the profile page itself loads it
+        page = get("https://github.com/users/%s/contributions" % OWNER, "text/html")[1].decode("utf-8", "ignore")
+        days = re.findall(r'data-date="(\d{4}-\d{2}-\d{2})"[^>]*?data-level="(\d)"', page) or [(a, b) for b, a in re.findall(r'data-level="(\d)"[^>]*?data-date="(\d{4}-\d{2}-\d{2})"', page)]
+        if days:
+            d["days"] = sorted((a, int(b)) for a, b in days)
+        m = re.search(r"([\d,]+)\s+contributions?\s+in\s+the\s+last\s+year", page)
+        if m: d["total"] = int(m.group(1).replace(",", ""))
+    except Exception as e:  # noqa: BLE001
+        print("contribution calendar unavailable:", e)
+    try:   # CISA Known Exploited Vulnerabilities: the five newest additions
+        j = json.loads(get("https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json")[1])
+        v = sorted(j["vulnerabilities"], key=lambda x: (x.get("dateAdded", ""), x.get("cveID", "")), reverse=True)[:5]
+        d["kev"] = [dict(date=ascii_clean(x.get("dateAdded", ""), 11), cve=ascii_clean(x.get("cveID", ""), 18), who=ascii_clean("%s %s" % (x.get("vendorProject", ""), x.get("product", "")), 30),
+                         name=ascii_clean(x.get("vulnerabilityName", ""), 44)) for x in v]
+        d["kev_count"] = int(j.get("count", len(j["vulnerabilities"])))
+        d["kev_date"] = ascii_clean(str(j.get("dateReleased", ""))[:10], 11)
+    except Exception as e:  # noqa: BLE001
+        print("CISA KEV feed unavailable:", e)
     return d
 
 
@@ -73,305 +119,418 @@ def esc(s):
     return html.escape(str(s), quote=True)
 
 
-STYLE = """
-  <style>
-    text { font-family: %s; }
-    @keyframes tw { 0%%,100%% { opacity: .35 } 50%% { opacity: 1 } }
-    @keyframes fade { from { opacity: 0 } }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px) } }
-    @keyframes draw { from { stroke-dasharray: var(--l); stroke-dashoffset: var(--l) } to { stroke-dashoffset: 0 } }
-    @keyframes ripple { from { transform: scale(.4); opacity: .9 } to { transform: scale(2.6); opacity: 0 } }
-    @keyframes blink { 0%%,49%% { opacity: 1 } 50%%,100%% { opacity: 0 } }
-    @keyframes scan { from { transform: translateY(-80px) } to { transform: translateY(520px) } }
-    @keyframes type { from { clip-path: inset(0 100%% 0 0) } to { clip-path: inset(0 0 0 0) } }
-    .tw { animation: tw 3.2s ease-in-out infinite }
-    .cur { animation: blink 1s steps(1) infinite }
-    .ripple { transform-box: fill-box; transform-origin: center; animation: ripple 3.4s ease-out infinite }
-    .scan { animation: scan 9s linear infinite }
-    /* reduced motion removes the sweeping and sliding movement (scan bar, ripples, slide-up) but keeps the gentle animation: twinkle, fade-in,
-       line drawing, typing and the cursor. A visitor whose browser asks for "no animation at all" used to get a static picture. */
-    @media (prefers-reduced-motion: reduce) { .scan, .ripple { animation: none !important } [style*="animation:rise"] { animation-name: fade !important } }
-  </style>""" % MONO
+def style():
+    return """<style>%s
+text{font-family:%s}
+@keyframes tw{0%%,100%%{opacity:.35}50%%{opacity:1}}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes draw{from{stroke-dasharray:var(--l);stroke-dashoffset:var(--l)}to{stroke-dashoffset:0}}
+@keyframes ripple{from{transform:scale(.4);opacity:.9}to{transform:scale(2.6);opacity:0}}
+@keyframes blink{0%%,49%%{opacity:1}50%%,100%%{opacity:0}}
+@keyframes scan{from{transform:translateY(-90px)}to{transform:translateY(480px)}}
+@keyframes type{from{clip-path:inset(0 100%% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes segpulse{0%%,62%%,100%%{fill:%s}30%%{fill:%s}}
+@keyframes nodepulse{0%%,9%%,100%%{stroke-opacity:.55;stroke-width:2}3%%{stroke-opacity:1;stroke-width:3.4}}
+@keyframes line{from{stroke-dashoffset:var(--l)}to{stroke-dashoffset:0}}
+.tw{animation:tw 3.4s ease-in-out infinite}
+.cur{animation:blink 1s steps(1) infinite}
+.ripple{transform-box:fill-box;transform-origin:center;animation:ripple 3.4s ease-out infinite}
+.scan{animation:scan 9s linear infinite}
+.sc-seg{animation:segpulse 4.4s ease-in-out infinite}
+.np{animation:nodepulse 12s linear infinite}
+/* reduced motion removes the sweeping and sliding movement but keeps the gentle animation: twinkle, fade-in, drawing, typing, the cursor */
+@media (prefers-reduced-motion:reduce){.scan,.ripple{animation:none!important}[style*="animation:rise"]{animation-name:fade!important}}
+</style>""" % (FONTS, MONO, P["plate"], P["plate_hi"])
 
 
-def svg(w, h, body, title, extra_defs=""):
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s">\n<title>%s</title>\n'
-            '<defs>%s\n  <linearGradient id="vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient>\n'
-            '  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="%s"/><stop offset="1" stop-color="#ffffff"/></linearGradient>\n'
-            '  <radialGradient id="sg"><stop offset="0" stop-color="#d7f4fb" stop-opacity=".9"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>\n'
-            '  <radialGradient id="ag"><stop offset="0" stop-color="%s" stop-opacity=".95"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>\n'
-            '  <radialGradient id="bg" cx="50%%" cy="40%%" r="80%%"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></radialGradient>\n'
-            '  <linearGradient id="scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="0"/><stop offset=".5" stop-color="%s" stop-opacity=".10"/><stop offset="1" stop-color="%s" stop-opacity="0"/></linearGradient>\n'
-            '  <filter id="glow" x="-20%%" y="-40%%" width="140%%" height="180%%"><feGaussianBlur stdDeviation="7"/></filter>%s</defs>%s\n%s\n</svg>\n') % (
-        w, h, w, h, esc(title), esc(title), STYLE, VIOLET, LILAC, "#6aa8ff", VIOLET, RED, RED, BG1, BG0, LILAC, LILAC, LILAC, extra_defs, "", body)
+def svg(w, h, body, title, defs=""):
+    d = ('<defs>%s'
+         '<linearGradient id="vio" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="900" y2="0"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient>'
+         '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="%s"/><stop offset=".55" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient>'
+         '<radialGradient id="sg"><stop offset="0" stop-color="%s" stop-opacity=".9"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>'
+         '<radialGradient id="ag"><stop offset="0" stop-color="%s" stop-opacity=".95"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>'
+         '<radialGradient id="bg" cx="50%%" cy="38%%" r="85%%"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></radialGradient>'
+         '<linearGradient id="scanbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="0"/><stop offset=".5" stop-color="%s" stop-opacity="%s"/><stop offset="1" stop-color="%s" stop-opacity="0"/></linearGradient>'
+         '<filter id="glow" x="-20%%" y="-40%%" width="140%%" height="180%%"><feGaussianBlur stdDeviation="6"/></filter>%s</defs>') % (
+        style(), P["blue"], P["cyan"], P["wm0"], P["cyan"], P["wm2"], P["glow"], P["blue"], P["red"], P["red"], P["bg1"], P["bg0"], P["cyan"], P["cyan"], P["scanop"], P["cyan"], defs)
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s"><title>%s</title>%s%s</svg>\n') % (
+        w, h, w, h, esc(title), esc(title), d, body)
 
 
-def panel(w, h, rx=22):
-    return ('<rect x="1" y="1" width="%d" height="%d" rx="%d" fill="url(#bg)" stroke="%s" stroke-width="2"/>'
-            '<rect class="scan" x="2" y="0" width="%d" height="80" fill="url(#scan)"/>') % (w - 2, h - 2, rx, EDGE, w - 4)
-
-
-def clip(w, h, rx=22, cid="c"):
+def clipdef(w, h, rx, cid):
     return '<clipPath id="%s"><rect x="1" y="1" width="%d" height="%d" rx="%d"/></clipPath>' % (cid, w - 2, h - 2, rx)
 
 
-# --- the Scorpius constellation of the avatar and banner (positions traced from antaryx_banner.png)
-PTS = [(913, 177, "s"), (951, 258, "d"), (944, 368, "s"), (811, 331, "s"), (730, 372, "r"), (667, 443, "s"), (569, 611, "d"), (561, 720, "s"),
-       (549, 840, "s"), (445, 880, "s"), (314, 874, "d"), (237, 785, "d"), (271, 746, "s"), (321, 677, "d")]
-LINES = [(0, 1), (1, 2), (1, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (11, 12), (12, 13)]
+def panel(w, h, rx=18, scan=True):
+    s = '<rect x="1" y="1" width="%d" height="%d" rx="%d" fill="url(#bg)" stroke="%s" stroke-width="2"/>' % (w - 2, h - 2, rx, P["edge"])
+    return s + ('<rect class="scan" x="2" y="0" width="%d" height="90" fill="url(#scanbar)"/>' % (w - 4) if scan else "")
 
 
-def constellation(x, y, size, star=1.0, draw=True):
-    x0 = min(p[0] for p in PTS); x1 = max(p[0] for p in PTS); y0 = min(p[1] for p in PTS); y1 = max(p[1] for p in PTS)
-    k = size / max(x1 - x0, y1 - y0)
-    ox, oy = x + (size - k * (x1 - x0)) / 2 - k * x0, y + (size - k * (y1 - y0)) / 2 - k * y0
-    f = lambda px, py: (round(ox + k * px, 1), round(oy + k * py, 1))
-    o = ['<g stroke="url(#vio)" stroke-width="%.1f" stroke-linecap="round" fill="none">' % (2.4 * star)]
-    for i, (a, b) in enumerate(LINES):
-        (ax, ay), (bx, by) = f(*PTS[a][:2]), f(*PTS[b][:2])
-        ln = int(((ax - bx) ** 2 + (ay - by) ** 2) ** .5) + 2
-        anim = ' style="--l:%d;animation:draw .5s ease-out %.2fs backwards"' % (ln, 0.4 + i * 0.18) if draw else ""
-        o.append('<line x1="%s" y1="%s" x2="%s" y2="%s"%s/>' % (ax, ay, bx, by, anim))
-    o.append("</g>")
-    for i, (px, py, kind) in enumerate(PTS):
-        cx, cy = f(px, py)
-        dl = "animation-delay:%.1fs" % ((i * 0.37) % 3.2)
-        if kind == "r":
-            o.append('<circle class="ripple" cx="%s" cy="%s" r="%.1f" fill="none" stroke="%s" stroke-width="2"/>' % (cx, cy, 14 * star, RED))
-            o.append('<circle class="ripple" style="animation-delay:1.7s" cx="%s" cy="%s" r="%.1f" fill="none" stroke="%s" stroke-width="1.5"/>' % (cx, cy, 14 * star, RED))
-            o.append('<circle cx="%s" cy="%s" r="%.1f" fill="url(#ag)"/><circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="%s"/>'
-                     '<circle cx="%s" cy="%s" r="%.1f" fill="#ffd9df"/>' % (cx, cy, 36 * star, dl, cx, cy, 8.5 * star, RED, cx, cy, 3.2 * star))
-        elif kind == "d":
-            r = 8.5 * star
-            o.append('<circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="url(#sg)"/><path d="M%s %.1f L%.1f %s L%s %.1f L%.1f %s Z" fill="#fff"/>' % (
-                dl, cx, cy, 24 * star, cx, cy - r, cx + r, cy, cx, cy + r, cx - r, cy))
+def card(w, h, rx, cid, inner, title, defs="", scan=True):
+    body = '<g clip-path="url(#%s)">%s%s</g>' % (cid, panel(w, h, rx, scan), inner)
+    return svg(w, h, body, title, clipdef(w, h, rx, cid) + defs)
+
+
+def tw(x, y, text, size, fill, weight=400, extra="", anchor=None):
+    a = ' text-anchor="%s"' % anchor if anchor else ""
+    return '<text x="%s" y="%s" font-size="%s" fill="%s" font-weight="%d"%s %s>%s</text>' % (x, y, size, fill, weight, a, extra, esc(text))
+
+
+def wrap(text, width, size):
+    n = max(int(width / (CW * size)), 8)
+    lines, cur = [], ""
+    for wd in text.split():
+        if len(cur) + len(wd) + 1 > n and cur:
+            lines.append(cur); cur = wd
         else:
-            o.append('<circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="url(#sg)"/><circle cx="%s" cy="%s" r="%.1f" fill="#eef6ff"/>' % (
-                dl, cx, cy, 15 * star, cx, cy, 4.2 * star))
-    return "".join(o)
+            cur = (cur + " " + wd).strip()
+    return lines + [cur]
 
 
-# --- the wordmark is drawn, not typed: the same pointed A (no crossbar) as the banner, identical on every platform
 LETTERS = {"A": "M0 100 L40 0 L80 100", "N": "M0 100 V0 L80 100 V0", "T": "M0 0 H80 M40 0 V100", "R": "M0 100 V0 H52 Q80 0 80 25 Q80 50 52 50 H0 M46 50 L80 100",
            "Y": "M0 0 L40 50 L80 0 M40 50 V100", "X": "M0 0 L80 100 M80 0 L0 100"}
 
 
 def wordmark(x, y, scale, width=13):
-    g = []
-    for i, ch in enumerate("ANTARYX"):
-        g.append('<path d="%s" transform="translate(%.1f 0)"/>' % (LETTERS[ch], i * 108))
-    inner = "".join(g)
+    inner = "".join('<path d="%s" transform="translate(%.1f 0)"/>' % (LETTERS[ch], i * 108) for i, ch in enumerate("ANTARYX"))
     return ('<g transform="translate(%s %s) scale(%.3f)" fill="none" stroke-linejoin="miter" stroke-linecap="butt">'
-            '<g stroke="#6aa8ff" stroke-width="%d" opacity=".55" filter="url(#glow)">%s</g>'
-            '<g stroke="url(#wm)" stroke-width="%d">%s</g></g>') % (x, y, scale, width + 6, inner, width, inner)
+            '<g stroke="%s" stroke-width="%d" opacity=".5" filter="url(#glow)">%s</g><g stroke="url(#wm)" stroke-width="%d">%s</g></g>') % (x, y, scale, P["blue"], width + 6, inner, width, inner)
 
 
-def digits_rain(x0, x1, y0, y1, seed=7):
+def rain(x0, x1, y0, y1, seed=7):
     import random
     r = random.Random(seed)
     o = []
-    for cx in range(x0, x1, 26):
+    for cx in range(x0, x1, 28):
         col = "".join('<tspan x="%d" dy="%d">%s</tspan>' % (cx, 0 if i == 0 else 22, r.choice("0123456789")) for i in range(int((y1 - y0) / 22)))
-        o.append('<text class="tw" style="animation-delay:%.1fs;animation-duration:%.1fs" x="%d" y="%d" fill="%s" fill-opacity=".11" font-size="16">%s</text>' % (
-            r.random() * 4, 4 + r.random() * 4, cx, y0, LILAC, col))
+        o.append('<text class="tw" style="animation-delay:%.1fs;animation-duration:%.1fs" x="%d" y="%d" fill="%s" fill-opacity="%s" font-size="15">%s</text>' % (
+            r.random() * 4, 4 + r.random() * 4, cx, y0, P["cyan"], P["rain"], col))
     return "".join(o)
 
 
-def typed(x, y, text, size, fill, delay, dur, extra=""):
-    steps = max(len(text), 1)
-    return ('<text x="%s" y="%s" font-size="%s" fill="%s" xml:space="preserve" style="animation:type %ss steps(%d) %ss backwards" %s>%s</text>') % (
-        x, y, size, fill, dur, steps, delay, extra, esc(text))
+def typed(x, y, text, size, fill, delay, dur, weight=400):
+    width = round(len(text) * CW * size, 1)
+    return ('<text x="%s" y="%s" font-size="%s" fill="%s" font-weight="%d" xml:space="preserve" textLength="%s" lengthAdjust="spacing" '
+            'style="animation:type %ss steps(%d) %ss backwards">%s</text>') % (x, y, size, fill, weight, width, dur, max(len(text), 1), delay, esc(text))
+
+
+def scorp(size, uid, animate=True):
+    pal = dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"], flat=P["text"])
+    return scorpion.group("neon", size, 22, pal, animate, uid)
 
 
 # ------------------------------------------------------------------ cards
-def hero():
-    w, h = 1200, 440
-    b = clip(w, h, 26, "hc") and ""
-    body = '<g clip-path="url(#hc)">' + panel(w, h, 26) + digits_rain(540, 1180, 40, 420) + digits_rain(20, 130, 40, 420, 3)
-    body += '<g style="animation:fade 1.2s ease-out backwards">' + constellation(90, 44, 350, 1.35) + "</g>"
-    body += '<g style="animation:rise .9s ease-out .6s backwards">' + wordmark(548, 124, 0.8) + "</g>"
-    body += '<line x1="550" y1="246" x2="1130" y2="246" stroke="%s" stroke-opacity=".5" stroke-width="1.5"/>' % LILAC
-    body += typed(550, 292, "/  SECURITY.  RESEARCH.  ADAPTATION.", 26, "#c4d0dc", 1.4, 2.6, 'textLength="566" lengthAdjust="spacing"')
-    body += '<rect class="cur" x="1126" y="270" width="14" height="26" fill="%s"/>' % RED
-    body += '<g style="animation:fade 1s ease-out 2.6s backwards"><text x="550" y="340" font-size="17" fill="%s">hybrid security research node</text>' % DIM
-    body += '<text x="550" y="368" font-size="17" fill="%s">blue team  <tspan fill="%s">+</tspan>  red team  <tspan fill="%s">//</tspan>  authorized scope only</text></g>' % (DIM, RED, VIOLET)
-    # HUD corners
-    for (cx, cy, sx, sy) in ((22, 22, 1, 1), (w - 22, 22, -1, 1), (22, h - 22, 1, -1), (w - 22, h - 22, -1, -1)):
-        body += '<path d="M%d %d h%d M%d %d v%d" stroke="%s" stroke-width="2" stroke-opacity=".7" fill="none"/>' % (cx, cy, 26 * sx, cx, cy, 26 * sy, LILAC)
-    body += "</g>"
-    return svg(w, h, body, "ANTARYX - security. research. adaptation.", clip(w, h, 26, "hc"))
+def hero(D):
+    h = 380
+    defs_sc, g = scorp(350, "sc")
+    inner = rain(400, 880, 40, 360) + rain(18, 120, 40, 360, 3)
+    inner += '<g style="animation:fade 1.2s ease-out backwards" transform="translate(18 14)">%s</g>' % g
+    inner += '<g style="animation:rise .9s ease-out .6s backwards">%s</g>' % wordmark(400, 92, 0.64)
+    inner += '<line x1="402" y1="190" x2="860" y2="190" stroke="%s" stroke-opacity=".55" stroke-width="1.5"/>' % P["cyan"]
+    inner += typed(402, 232, "/  SECURITY.  RESEARCH.  ADAPTATION.", 18, P["text"], 1.4, 2.6)
+    inner += '<rect class="cur" x="%d" y="216" width="11" height="22" fill="%s"/>' % (402 + int(36 * CW * 18) + 6, P["red"])
+    inner += '<g style="animation:fade 1s ease-out 2.6s backwards">%s%s</g>' % (
+        tw(402, 276, "hybrid security research node", 15, P["dim"]),
+        '<text x="402" y="302" font-size="15" fill="%s">blue team <tspan fill="%s">+</tspan> red team <tspan fill="%s">//</tspan> authorized scope only</text>' % (P["dim"], P["red"], P["blue"]))
+    for (cx, cy, sx, sy) in ((18, 18, 1, 1), (W - 18, 18, -1, 1), (18, h - 18, 1, -1), (W - 18, h - 18, -1, -1)):
+        inner += '<path d="M%d %d h%d M%d %d v%d" stroke="%s" stroke-width="2" stroke-opacity=".7" fill="none"/>' % (cx, cy, 24 * sx, cx, cy, 24 * sy, P["cyan"])
+    return card(W, h, 22, "hc", inner, "ANTARYX - security. research. adaptation.", defs_sc)
 
 
-def term(w, h, title, lines, cid, total_delay=0.4):
-    """lines: (kind, text) kind: p prompt, o output, d dim, r red, k ok"""
-    body = '<g clip-path="url(#%s)">' % cid + panel(w, h)
-    body += '<rect x="1" y="1" width="%d" height="44" fill="%s"/><line x1="1" y1="45" x2="%d" y2="45" stroke="%s" stroke-width="2"/>' % (w - 2, PANEL, w - 1, EDGE)
-    for i, c in enumerate(("#ff6b81", "#f2cc60", "#7ee787")):
-        body += '<circle cx="%d" cy="23" r="7" fill="%s" opacity=".85"/>' % (30 + i * 24, c)
-    body += '<text x="%d" y="29" font-size="15" fill="%s" text-anchor="middle">%s</text>' % (w // 2, DIM, esc(title))
-    y, t = 86, total_delay
+def term(title, lines, last_prompt=True):
+    h = 46 + 28 * len(lines) + (34 if last_prompt else 18) + 20
+    inner = '<rect x="1" y="1" width="%d" height="42" fill="%s"/><line x1="1" y1="43" x2="%d" y2="43" stroke="%s" stroke-width="2"/>' % (W - 2, P["panel"], W - 1, P["edge"])
+    for i, c in enumerate((P["red"], P["yellow"], P["green"])):
+        inner += '<circle cx="%d" cy="22" r="6.5" fill="%s" opacity=".9"/>' % (28 + i * 22, c)
+    inner += tw(W / 2, 27, title, 14, P["dim"], anchor="middle")
+    y, t = 80, 0.4
     for kind, text in lines:
         if kind == "p":
-            body += '<text x="34" y="%d" font-size="20" fill="%s" style="animation:fade .01s steps(1) %.2fs backwards"><tspan fill="%s">&gt;_</tspan> %s</text>' % (y, TEXT, t, RED, esc(text))
+            inner += '<text x="30" y="%d" font-size="16.5" fill="%s" style="animation:fade .01s steps(1) %.2fs backwards"><tspan fill="%s">&gt;_</tspan> %s</text>' % (y, P["text"], t, P["red"], esc(text))
             t += 0.9
         else:
-            col = {"o": SILVER, "d": DIM, "r": RED, "k": "#7ee787"}[kind]
-            body += '<text x="34" y="%d" font-size="19" fill="%s" style="animation:fade .4s ease-out %.2fs backwards">%s</text>' % (y, col, t, esc(text))
+            col = {"o": P["dim"], "k": P["green"], "d": P["faint"], "r": P["red"], "w": P["text"]}[kind]
+            inner += '<text x="30" y="%d" font-size="16.5" fill="%s" style="animation:fade .4s ease-out %.2fs backwards">%s</text>' % (y, col, t, esc(text))
             t += 0.5
-        y += 34
-    return body, t, y
+        y += 28
+    if last_prompt:
+        inner += '<text x="30" y="%d" font-size="16.5" fill="%s"><tspan fill="%s">&gt;_</tspan></text><rect class="cur" x="68" y="%d" width="10" height="20" fill="%s"/>' % (y + 6, P["text"], P["red"], y - 10, P["red"])
+    return inner, h
 
 
-def whoami():
-    w, h = 1200, 402
-    lines = [("p", "whoami && id"), ("o", "antaryx   uid=1337(antaryx) gid=1337(operators) groups=defense,offense,research"),
-             ("p", "cat /etc/mission"), ("o", "operating in the void between defensive architecture and offensive exploitation."),
+def whoami(D):
+    lines = [("p", "whoami && id"), ("w", "antaryx  uid=1337(antaryx) gid=1337(operators) groups=defense,offense,research"),
+             ("p", "cat /etc/mission"), ("w", "operating in the void between defensive architecture and offensive exploitation."),
              ("p", "echo $RULES_OF_ENGAGEMENT"), ("k", "authorized targets only  //  HTB  THM  CTF  own lab  //  scope before scan"),
-             ("p", "plumbline scan --offline"), ("o", "%d checks  %d modules  0 network calls  evidence first" % (D["checks"], D["modules"]))]
-    body, t, y = term(w, h, "antaryx@void: ~", lines, "wc")
-    body += '<text x="34" y="%d" font-size="20" fill="%s"><tspan fill="%s">&gt;_</tspan></text><rect class="cur" x="74" y="%d" width="11" height="22" fill="%s"/></g>' % (y, TEXT, RED, y - 18, RED)
-    return svg(w, h, body, "whoami: a hybrid security research node", clip(w, h, 22, "wc"))
+             ("p", "plumbline scan --offline"), ("w", "%d checks  %d modules  0 network calls  evidence first" % (D["checks"], D["modules"]))]
+    inner, h = term("antaryx@void: ~", lines)
+    return card(W, h, 18, "wc", inner, "whoami: a hybrid security research node")
 
 
 def vectors(kind):
-    w, h = 598, 330
     blue = kind == "blue"
-    head = "DEFENSE_VECTORS  //  BLUE TEAM" if blue else "OFFENSE_VECTORS  //  RED TEAM"
-    accent = LILAC if blue else RED
+    head = "DEFENSE_VECTORS // BLUE TEAM" if blue else "OFFENSE_VECTORS // RED TEAM"
+    acc = P["cyan"] if blue else P["red"]
     items = [("Anomaly detection", "parsing the void for unauthorized telemetry"), ("Forensic architecture", "reconstructing fragmented footprints, auditing access logs"),
              ("System hardening", "impenetrable Linux / WSL and containerised infrastructure")] if blue else [
         ("Vulnerability research", "logic flaws, misconfigurations, system weaknesses"), ("Payload engineering", "silent, adaptive execution chains"),
         ("Stealth operations", "behavioural mutation, footprint reduction")]
-    body = '<g clip-path="url(#vc%s)">' % kind + panel(w, h)
-    body += '<text x="30" y="52" font-size="19" fill="%s" letter-spacing="1.5">[ %s ]</text>' % (accent, head)
-    body += '<line x1="30" y1="68" x2="%d" y2="68" stroke="%s" stroke-opacity=".5"/>' % (w - 30, accent)
+    h = 352
+    inner = tw(26, 46, "[ %s ]" % head, 15, acc, 600, 'letter-spacing="1"')
+    inner += '<line x1="26" y1="62" x2="%d" y2="62" stroke="%s" stroke-opacity=".55"/>' % (HALF - 26, acc)
+    y = 104
     for i, (a, b) in enumerate(items):
-        y = 112 + i * 62
-        body += ('<g style="animation:rise .6s ease-out %.2fs backwards"><path d="M34 %d l9 7 l-9 7" stroke="%s" stroke-width="3" fill="none" stroke-linecap="round"/>'
-                 '<text x="58" y="%d" font-size="20" fill="%s">%s</text><text x="58" y="%d" font-size="14.5" fill="%s">%s</text></g>') % (
-            0.3 + i * 0.25, y - 14, accent, y, TEXT, esc(a), y + 22, DIM, esc(b))
+        g = '<path d="M28 %d l8 6 l-8 6" stroke="%s" stroke-width="3" fill="none" stroke-linecap="round"/>' % (y - 13, acc)
+        g += tw(50, y, a, 18, P["text"], 600)
+        lines = wrap(b, HALF - 76, 13.5)
+        for j, ln in enumerate(lines):
+            g += tw(50, y + 22 + j * 18, ln, 13.5, P["dim"])
+        inner += '<g style="animation:rise .6s ease-out %.2fs backwards">%s</g>' % (0.3 + i * 0.25, g)
+        y += 70 + (18 if len(lines) > 1 else 0)
     foot = "defence is the ground truth: measure it" if blue else "scope-gated  //  authorized targets only"
-    body += '<text x="30" y="%d" font-size="14" fill="%s">%s</text></g>' % (h - 24, accent if not blue else DIM, esc(foot))
-    return svg(w, h, body, head, clip(w, h, 22, "vc" + kind))
+    inner += tw(26, h - 24, foot, 13.5, acc if not blue else P["dim"])
+    return card(HALF, h, 18, "v" + kind, inner, head)
+
+
+def heading(cmd, cid):
+    h = 66
+    inner = '<text x="6" y="40" font-size="21" fill="%s" font-weight="600"><tspan fill="%s">&gt;_</tspan> %s</text>' % (P["text"], P["red"], esc(cmd))
+    x = 6 + (3 + len(cmd)) * CW * 21 + 18
+    inner += '<line x1="%.0f" y1="35" x2="%d" y2="35" stroke="url(#vio)" stroke-width="2" stroke-opacity=".8" style="--l:%d;stroke-dasharray:%d;animation:line 1.4s ease-out backwards"/>' % (x, W - 6, W, W)
+    inner += '<circle class="tw" cx="%d" cy="35" r="3.5" fill="%s"/>' % (W - 6, P["red"])
+    return svg(W, h, inner, cmd)
 
 
 def repo_card(name, tagline, chips, stats, cid):
-    w, h = 598, 260
-    body = '<g clip-path="url(#%s)">' % cid + panel(w, h)
-    body += '<path d="M30 40 h10 v-10 M30 40 v-12 h10" stroke="%s" fill="none" stroke-width="0"/>' % LILAC
-    body += '<text x="30" y="54" font-size="26" fill="%s" font-weight="bold">%s</text>' % (TEXT, esc(name))
-    body += '<circle cx="%d" cy="46" r="5" fill="%s"/>' % (w - 38, RED)
-    # wrap the tagline over two lines
-    words, lines, cur = tagline.split(), [], ""
-    for wd in words:
-        if len(cur) + len(wd) + 1 > 52:
-            lines.append(cur); cur = wd
-        else:
-            cur = (cur + " " + wd).strip()
-    lines.append(cur)
-    for i, ln in enumerate(lines[:3]):
-        body += '<text x="30" y="%d" font-size="16" fill="%s">%s</text>' % (92 + i * 24, SILVER, esc(ln))
-    x = 30
+    h = 292
+    inner = tw(26, 52, name, 24, P["text"], 600) + '<circle cx="%d" cy="44" r="5" fill="%s"/>' % (HALF - 30, P["red"])
+    for i, ln in enumerate(wrap(tagline, HALF - 52, 15)[:3]):
+        inner += tw(26, 90 + i * 22, ln, 15, P["text"])
+    x, y = 26, 178
     for c in chips:
-        cw = 14 + len(c) * 8.6
-        body += '<rect x="%.1f" y="172" width="%.1f" height="28" rx="14" fill="none" stroke="%s" stroke-opacity=".8"/><text x="%.1f" y="191" font-size="14" fill="%s" text-anchor="middle">%s</text>' % (
-            x, cw, LILAC, x + cw / 2, LILAC, esc(c))
-        x += cw + 10
-    body += '<line x1="30" y1="214" x2="%d" y2="214" stroke="%s" stroke-opacity=".5"/>' % (w - 30, EDGE)
-    sx = 30
+        cw = 22 + len(c) * CW * 13
+        if x + cw > HALF - 20: x, y = 26, y + 34
+        inner += '<rect x="%.1f" y="%d" width="%.1f" height="26" rx="13" fill="none" stroke="%s" stroke-opacity=".85"/>%s' % (x, y - 18, cw, P["cyan"], tw(x + cw / 2, y, c, 13, P["cyan"], anchor="middle"))
+        x += cw + 8
+    inner += '<line x1="26" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-opacity=".6"/>' % (h - 76, HALF - 26, h - 76, P["edge"])
+    sx, sy = 26, h - 48
     for label, val in stats:
-        body += '<text x="%d" y="242" font-size="17" fill="%s" font-weight="bold">%s <tspan font-size="13" fill="%s" font-weight="normal">%s</tspan></text>' % (sx, TEXT, esc(val), DIM, esc(label))
-        sx += 24 + len(val + label) * 9.6
-    body += "</g>"
-    return svg(w, h, body, name, clip(w, h, 22, cid))
+        wst = (len(val) * CW * 16) + (len(label) + 1) * CW * 12 + 22
+        if sx + wst > HALF - 20: sx, sy = 26, sy + 28
+        inner += '<text x="%.1f" y="%d" font-size="16" fill="%s" font-weight="600">%s <tspan font-size="12" fill="%s" font-weight="400">%s</tspan></text>' % (sx, sy, P["text"], esc(val), P["dim"], esc(label))
+        sx += wst
+    return card(HALF, h, 18, cid, inner, name)
 
 
-def activity():
-    w, h = 1200, 230
+def activity(D):
+    h = 240
     weeks = D["weeks"] or [0] * 52
     mx = max(max(weeks), 1)
-    body = '<g clip-path="url(#ac)">' + panel(w, h)
-    body += '<text x="34" y="46" font-size="18" fill="%s" letter-spacing="1.5">[ SIGNAL // plumbline commit activity, last %d weeks ]</text>' % (LILAC, len(weeks))
-    body += '<text x="%d" y="46" font-size="15" fill="%s" text-anchor="end">%d commits in total  //  %s</text>' % (w - 34, DIM, D["commits"], esc(D["version"]))
-    x0, x1, yb, ht = 40, w - 40, 196, 110
+    inner = tw(28, 44, "[ SIGNAL // plumbline commit activity, last %d weeks ]" % len(weeks), 15, P["cyan"], 600, 'letter-spacing="1"')
+    inner += tw(W - 28, 44, "%d commits  //  %s" % (D["commits"], D["version"]), 14, P["dim"], anchor="end")
+    x0, x1, yb, ht = 40, W - 40, 206, 120
     step = (x1 - x0) / max(len(weeks) - 1, 1)
     pts = [(x0 + i * step, yb - ht * v / mx) for i, v in enumerate(weeks)]
     area = "M%.1f %d " % (pts[0][0], yb) + " ".join("L%.1f %.1f" % p for p in pts) + " L%.1f %d Z" % (pts[-1][0], yb)
     line = "M" + " L".join("%.1f %.1f" % p for p in pts)
-    body += '<defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity=".55"/><stop offset="1" stop-color="%s" stop-opacity="0"/></linearGradient></defs>' % (VIOLET, VIOLET)
-    body += '<path d="%s" fill="url(#ar)" style="animation:fade 1.4s ease-out .3s backwards"/>' % area
-    body += '<path d="%s" fill="none" stroke="url(#vio)" stroke-width="2.4" stroke-linejoin="round" style="--l:3200;animation:draw 2.2s ease-out .2s backwards"/>' % line
+    defs = '<linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity=".5"/><stop offset="1" stop-color="%s" stop-opacity="0"/></linearGradient>' % (P["blue"], P["blue"])
+    inner += '<path d="%s" fill="url(#ar)" style="animation:fade 1.4s ease-out .3s backwards"/>' % area
+    inner += '<path d="%s" fill="none" stroke="url(#vio)" stroke-width="2.4" stroke-linejoin="round" style="--l:2400;animation:draw 2.2s ease-out .2s backwards"/>' % line
     if any(weeks):
         i = max(range(len(weeks)), key=lambda k: weeks[k]); px, py = pts[i]
-        body += '<circle class="ripple" cx="%.1f" cy="%.1f" r="9" fill="none" stroke="%s" stroke-width="2"/><circle cx="%.1f" cy="%.1f" r="5" fill="%s"/>' % (px, py, RED, px, py, RED)
-        body += '<text x="%.1f" y="%.1f" font-size="13" fill="%s" text-anchor="middle">peak %d</text>' % (px, max(py - 16, 70), RED, weeks[i])
-    body += "</g>"
-    return svg(w, h, body, "plumbline commit activity", clip(w, h, 22, "ac"))
-
-
-def rules():
-    w, h = 1200, 96
-    items = ["AUTHORIZED TARGETS ONLY", "SCOPE BEFORE SCAN", "EVIDENCE OVER OPINION", "REPORT, NEVER WEAPONISE"]
-    body = '<g clip-path="url(#rc)">' + panel(w, h, 18)
-    cw = (w - 40) / len(items)
-    for i, t in enumerate(items):
-        cx = 20 + cw * i + cw / 2
-        body += '<g style="animation:fade .6s ease-out %.2fs backwards"><path d="M%.1f 34 l7 7 l-7 7 l-7 -7 Z" fill="%s"/><text x="%.1f" y="66" font-size="15" fill="%s" text-anchor="middle" letter-spacing="1.2">%s</text></g>' % (
-            0.2 + i * 0.2, cx, RED if i == 0 else LILAC, cx, SILVER, t)
-    body += "</g>"
-    return svg(w, h, body, "rules of engagement", clip(w, h, 18, "rc"))
-
-
-def button(name, label, sub, cid):
-    w, h = 286, 64
-    body = '<g clip-path="url(#%s)">' % cid + panel(w, h, 16)
-    body += '<text x="22" y="29" font-size="17" fill="%s" font-weight="bold" letter-spacing="1">%s</text><text x="22" y="49" font-size="13" fill="%s">%s</text>' % (TEXT, esc(label), DIM, esc(sub))
-    body += '<path d="M%d 22 l9 10 l-9 10" stroke="%s" stroke-width="3" fill="none" stroke-linecap="round"/></g>' % (w - 34, RED)
-    return svg(w, h, body, label + " " + sub, clip(w, h, 16, cid))
-
-
-def footer():
-    w, h = 1200, 210
-    lines = [("p", "exit"), ("k", "[ IDENTITY: VERIFIED ]"), ("d", "[ PGP FINGERPRINT: UNAVAILABLE ]"), ("d", "Connection to 127.0.0.1 closed.")]
-    body, t, y = term(w, h, "antaryx@void: ~", lines, "fc")
-    body += '<rect class="cur" x="34" y="%d" width="11" height="20" fill="%s"/></g>' % (y - 18, RED)
-    return svg(w, h, body, "connection closed", clip(w, h, 22, "fc"))
+        inner += '<circle class="ripple" cx="%.1f" cy="%.1f" r="9" fill="none" stroke="%s" stroke-width="2"/><circle cx="%.1f" cy="%.1f" r="5" fill="%s"/>' % (px, py, P["red"], px, py, P["red"])
+        inner += tw(px, max(py - 16, 76), "peak %d" % weeks[i], 13, P["red"], anchor="middle")
+    return card(W, h, 18, "ac", inner, "plumbline commit activity", defs)
 
 
 def stack():
-    w, h = 1200, 92
     items = ["Python", "Go", "Docker", "Bash", "Django", "Linux / WSLg", "Git"]
-    body = '<g clip-path="url(#sk)">' + panel(w, h, 18)
-    body += '<text x="30" y="30" font-size="14" fill="%s" letter-spacing="1.5">CORE_STACK</text>' % DIM
-    x = 30
+    inner = tw(28, 32, "CORE_STACK", 13, P["dim"], extra='letter-spacing="1.5"')
+    x, y, rows = 28, 62, 1
     for i, t in enumerate(items):
-        cw = 42 + len(t) * 10.6
-        body += ('<g style="animation:fade .5s ease-out %.2fs backwards"><rect x="%.1f" y="42" width="%.1f" height="34" rx="17" fill="none" stroke="%s" stroke-opacity=".85"/>'
-                 '<circle cx="%.1f" cy="59" r="3.5" fill="%s"/><text x="%.1f" y="64" font-size="16" fill="%s">%s</text></g>') % (
-            0.2 + i * 0.15, x, cw, LILAC, x + 19, RED if t == "Go" else VIOLET, x + 32, TEXT, esc(t))
+        cw = 44 + len(t) * CW * 16
+        if x + cw > W - 24: x, y, rows = 28, y + 44, rows + 1
+        inner += ('<g style="animation:fade .5s ease-out %.2fs backwards"><rect x="%.1f" y="%d" width="%.1f" height="34" rx="17" fill="none" stroke="%s" stroke-opacity=".85"/>'
+                  '<circle cx="%.1f" cy="%d" r="4" fill="%s"/>%s</g>') % (0.2 + i * 0.15, x, y - 22, cw, P["cyan"], x + 19, y - 5, P["red"] if t == "Go" else P["blue"], tw(x + 32, y, t, 16, P["text"]))
         x += cw + 12
-    body += "</g>"
-    return svg(w, h, body, "core stack: " + ", ".join(items), clip(w, h, 18, "sk"))
+    return card(W, 40 + 44 * rows + 18, 16, "sk", inner, "core stack: " + ", ".join(items))
+
+
+def method():
+    h = 340
+    nodes = [("SCOPE", "authorization"), ("RECON", "map the surface"), ("HYPOTHESIS", "what could break"), ("TEST", "in scope only"),
+             ("EVIDENCE", "reproducible"), ("REPORT", "clear and honest"), ("HARDEN", "fix, then re-test")]
+    nw, nh = 184, 70
+    xs = [30, 250, 470, 690]
+    pos = [(xs[0], 64), (xs[1], 64), (xs[2], 64), (xs[3], 64), (xs[3], 214), (xs[2], 214), (xs[1], 214)]
+    cen = [(x + nw / 2, y + nh / 2) for x, y in pos]
+    loop = [cen[0], cen[1], cen[2], cen[3], cen[4], cen[5], cen[6], (cen[0][0], cen[6][1]), cen[0]]
+    path = "M" + " L".join("%.0f %.0f" % p for p in loop)
+    inner = tw(28, 40, "[ METHOD // the engagement loop ]", 15, P["cyan"], 600, 'letter-spacing="1"')
+    inner += '<path d="%s" fill="none" stroke="%s" stroke-opacity=".55" stroke-width="1.6" stroke-dasharray="5 6"/>' % (path, P["blue"])
+    d, acc = [0.0], 0.0
+    for a, b in zip(loop, loop[1:]):
+        acc += math.hypot(b[0] - a[0], b[1] - a[1]); d.append(acc)
+    total, period = acc, 12.0
+    for i, ((x, y), (name, sub)) in enumerate(zip(pos, nodes)):
+        inner += ('<g><rect class="np" style="animation-delay:%.2fs" x="%d" y="%d" width="%d" height="%d" rx="14" fill="%s" stroke="%s" stroke-opacity=".55" stroke-width="2"/>%s%s</g>') % (
+            d[i] / total * period, x, y, nw, nh, P["panel"], P["red"] if i == 0 else P["blue"],
+            tw(x + nw / 2, y + 30, name, 17, P["text"], 600, anchor="middle", extra='letter-spacing="1"'), tw(x + nw / 2, y + 52, sub, 12.5, P["dim"], anchor="middle"))
+    inner += ('<g><circle r="9" fill="url(#ag)"><animateMotion dur="%ss" repeatCount="indefinite" path="%s"/></circle>'
+              '<circle r="4" fill="%s"><animateMotion dur="%ss" repeatCount="indefinite" path="%s"/></circle></g>') % (period, path, P["red"], period, path)
+    inner += tw(cen[0][0] + 12, cen[6][1] + 58, "what the defence missed feeds the next scope", 13, P["dim"])
+    return card(W, h, 18, "mc", inner, "method: scope, recon, hypothesis, test, evidence, report, harden")
+
+
+def rules():
+    items = ["AUTHORIZED TARGETS ONLY", "SCOPE BEFORE SCAN", "EVIDENCE OVER OPINION", "REPORT, NEVER WEAPONISE"]
+    inner = ""
+    cw = (W - 24) / len(items)
+    for i, t in enumerate(items):
+        cx = 12 + cw * i + cw / 2
+        inner += '<g style="animation:fade .6s ease-out %.2fs backwards"><path d="M%.1f 34 l7 7 l-7 7 l-7 -7 Z" fill="%s"/>%s</g>' % (0.2 + i * 0.2, cx, P["red"] if i == 0 else P["cyan"], tw(cx, 74, t, 12.5, P["text"], 600, anchor="middle", extra='letter-spacing=".6"'))
+    return card(W, 98, 16, "rc", inner, "rules of engagement")
+
+
+def button(label, sub, cid):
+    w, h = 290, 72
+    inner = tw(22, 31, label, 17, P["text"], 600, extra='letter-spacing="1"') + tw(22, 53, sub, 13, P["dim"])
+    inner += '<path d="M%d 24 l9 12 l-9 12" stroke="%s" stroke-width="3" fill="none" stroke-linecap="round"/>' % (w - 34, P["red"])
+    return card(w, h, 14, cid, inner, label + " " + sub, scan=False)
+
+
+def footer():
+    lines = [("p", "exit"), ("k", "[ IDENTITY: VERIFIED ]"), ("d", "[ PGP FINGERPRINT: UNAVAILABLE ]"), ("d", "Connection to 127.0.0.1 closed.")]
+    inner, h = term("antaryx@void: ~", lines)
+    return card(W, h, 18, "fc", inner, "connection closed")
 
 
 def divider():
-    w, h = 1200, 70
-    body = '<line x1="40" y1="35" x2="560" y2="35" stroke="url(#vio)" stroke-opacity=".6"/><line x1="640" y1="35" x2="1160" y2="35" stroke="url(#vio)" stroke-opacity=".6"/>'
-    body += constellation(568, 2, 64, 0.45, draw=False)
-    return svg(w, h, body, "divider")
+    defs, g = scorpion.group("neon", 74, 4, dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"]), False, "dv")
+    inner = '<line x1="30" y1="42" x2="396" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><line x1="504" y1="42" x2="870" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><g transform="translate(413 5)">%s</g>' % g
+    return svg(W, 84, inner, "divider", defs)
 
 
-D = live()
-cards = {
-    "hero": hero(), "whoami": whoami(), "blue": vectors("blue"), "red": vectors("red"),
-    "plumbline": repo_card("plumbline", "A deterministic, offline, evidence-first host security auditor for Linux. Hang a line. See what's true.",
-                           ["Go", "Linux", "CIS", "SARIF", "Apache-2.0"], [("checks", str(D["checks"])), ("modules", str(D["modules"])), ("network calls", "0"), ("release", D["version"])], "pc"),
-    "plumbline-action": repo_card("plumbline-action", "Runs plumbline on a GitHub Actions runner and sends the findings to the Security tab as SARIF.",
-                                  ["GitHub Actions", "SARIF", "DevSecOps"], [("pinned release", D["version"]), ("checksum", "verified")], "pa"),
-    "activity": activity(), "stack": stack(), "rules": rules(), "divider": divider(), "footer": footer(),
-    "btn-htb": button("htb", "HACKTHEBOX", "/users/3514431", "b1"), "btn-thm": button("thm", "TRYHACKME", "/p/antaryx", "b2"), "btn-mail": button("mail", "SECURE COMM", "antaryx@proton.me", "b3"),
-}
-for name, text in cards.items():
-    (OUT / (name + ".svg")).write_text(text, encoding="utf-8", newline="\n")
-print("cards:", {n: len(t) for n, t in cards.items()})
-print("data:", {k: v for k, v in D.items() if k != "weeks"}, "weeks:", len(D["weeks"]))
+def starmap(D):
+    h = 268
+    days = D["days"]
+    inner = tw(28, 42, "[ CONSTELLATION // %d contributions in the last year ]" % D["total"], 15, P["cyan"], 600, 'letter-spacing="1"')
+    sdefs, sg = scorpion.group("neon", 230, 6, dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"]), False, "sm")
+    inner += '<g opacity=".13" transform="translate(40 30)">%s</g>' % sg
+    if days:
+        weeks = (len(days) + 6) // 7
+        first = datetime.date.fromisoformat(days[0][0])
+        off = (first.weekday() + 1) % 7            # GitHub's weeks start on Sunday
+        x0, y0, dx, dy = 36, 84, (W - 72) / max(weeks + 1, 1), 24
+        pts = []
+        for i, (dstr, lvl) in enumerate(days):
+            col, row = (i + off) // 7, (i + off) % 7
+            x, y = x0 + col * dx, y0 + row * dy
+            inner += '<circle cx="%.1f" cy="%.1f" r="1.4" fill="%s" fill-opacity=".35"/>' % (x, y, P["faint"])
+            if lvl > 0: pts.append((x, y, lvl))
+        for a, b in zip(pts, pts[1:]):
+            inner += '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-opacity=".45" stroke-width="1.2"/>' % (a[0], a[1], b[0], b[1], P["blue"])
+        for i, (x, y, lvl) in enumerate(pts):
+            r = 3.5 + lvl * 1.4
+            last = i == len(pts) - 1
+            inner += '<circle class="tw" style="animation-delay:%.1fs" cx="%.1f" cy="%.1f" r="%.1f" fill="url(#%s)"/>' % ((i * 0.37) % 3.2, x, y, r * 3.2, "ag" if last else "sg")
+            inner += '<circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s"/>' % (x, y, r, P["red"] if last else P["star"])
+            if last: inner += '<circle class="ripple" cx="%.1f" cy="%.1f" r="9" fill="none" stroke="%s" stroke-width="1.6"/>' % (x, y, P["red"])
+    else:
+        inner += tw(W / 2, 150, "calendar unavailable", 16, P["dim"], anchor="middle")
+    inner += tw(28, h - 18, "each star is a day with a contribution, joined in order; the newest star is red", 12.5, P["dim"])
+    return card(W, h, 18, "sm", inner, "contribution star map", sdefs)
+
+
+def threat(D):
+    kev = D["kev"]
+    fs = 14
+    c = CW * fs
+    h = 78 + 34 * max(len(kev), 1) + 30
+    inner = tw(28, 44, "[ FEED // CISA known exploited vulnerabilities, newest first ]", 15, P["cyan"], 600, 'letter-spacing="1"')
+    y = 86
+    if kev:
+        for i, k in enumerate(kev):
+            row = (tw(28, y, k["date"], fs, P["dim"]) + tw(28 + 11 * c, y, k["cve"], fs, P["red"], 600) +
+                   tw(28 + 27 * c, y, k["who"][:24], fs, P["text"]) + tw(28 + 52 * c, y, k["name"][:46], fs, P["dim"]))
+            inner += '<g style="animation:fade .5s ease-out %.2fs backwards">%s</g>' % (0.3 + i * 0.35, row)
+            y += 34
+        inner += tw(28, h - 14, "%s entries, feed dated %s  //  source: cisa.gov  //  text is cut to printable ASCII" % (D.get("kev_count", "?"), D.get("kev_date", "?")), 12, P["faint"])
+    else:
+        inner += tw(28, 90, "feed unavailable at the last redraw", 15, P["dim"])
+    return card(W, h, 18, "tk", inner, "CISA known exploited vulnerabilities feed")
+
+
+def lablog():
+    try:
+        entries = json.load(open(ROOT / "data/lab-log.json", encoding="utf-8"))["entries"]
+    except Exception:   # noqa: BLE001
+        entries = []
+    h = 78 + 34 * max(len(entries), 1) + 22
+    inner = tw(28, 44, "[ LAB LOG // authorized platforms only ]", 15, P["cyan"], 600, 'letter-spacing="1"')
+    y = 86
+    for i, e in enumerate(entries[:6]):
+        st = ascii_clean(e.get("status", ""), 14)
+        col = P["green"] if st in ("rooted", "done", "solved") else P["yellow"]
+        row = (tw(28, y, ascii_clean(e.get("date", ""), 11), 14.5, P["dim"]) + tw(28 + 12 * CW * 14.5, y, ascii_clean(e.get("platform", ""), 12), 14.5, P["cyan"], 600) +
+               tw(28 + 26 * CW * 14.5, y, ascii_clean(e.get("name", ""), 34), 14.5, P["text"]) + tw(W - 28, y, st, 14.5, col, 600, anchor="end"))
+        inner += '<g style="animation:fade .5s ease-out %.2fs backwards">%s</g>' % (0.3 + i * 0.3, row)
+        y += 34
+    if not entries:
+        inner += tw(28, 90, "no entries yet: data/lab-log.json", 15, P["dim"])
+    return card(W, h, 18, "lg", inner, "lab log")
+
+
+def build(theme, D):
+    global P
+    P = theme
+    suffix = "" if theme["name"] == "dark" else "-light"
+    c = {
+        "hero": hero(D), "whoami": whoami(D), "blue": vectors("blue"), "red": vectors("red"),
+        "h-log": heading("git log --author=antaryx --stat", "h1"), "h-method": heading("cat /etc/method", "h2"), "h-feed": heading("tail -f /var/feed/kev", "h3"),
+        "h-stars": heading("star-map --contributions", "h4"), "h-lab": heading("cat /var/log/lab.log", "h5"), "h-net": heading("netstat -ano | grep ESTABLISHED", "h6"),
+        "plumbline": repo_card("plumbline", "A deterministic, offline, evidence-first host security auditor for Linux. Hang a line. See what's true.",
+                               ["Go", "Linux", "CIS", "SARIF", "Apache-2.0"], [("checks", str(D["checks"])), ("modules", str(D["modules"])), ("network calls", "0"), ("release", D["version"])], "pc"),
+        "plumbline-action": repo_card("plumbline-action", "Runs plumbline on a GitHub Actions runner and sends the findings to the Security tab as SARIF.",
+                                      ["GitHub Actions", "SARIF", "DevSecOps"], [("pinned release", D["version"]), ("checksum", "verified")], "pa"),
+        "activity": activity(D), "stack": stack(), "method": method(), "rules": rules(), "threat": threat(D), "starmap": starmap(D), "lablog": lablog(),
+        "divider": divider(), "footer": footer(),
+        "btn-htb": button("HACKTHEBOX", "/users/3514431", "b1"), "btn-thm": button("TRYHACKME", "/p/antaryx", "b2"), "btn-mail": button("SECURE COMM", "antaryx@proton.me", "b3"),
+    }
+    for name, text in c.items():
+        (OUT / (name + suffix + ".svg")).write_text(text, encoding="utf-8", newline="\n")
+    return {n: len(t) for n, t in c.items()}
+
+
+def art_assets():
+    """the avatar and the repository social-preview image, as SVG (assets/*.svg); the PNGs are rendered from them (rsvg-convert -w 1024 ...)"""
+    global P
+    P = DARK
+    (ROOT / "assets").mkdir(exist_ok=True)
+    defs, g = scorp(700, "av", False)
+    av = ('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>Antaryx avatar</title><defs>%s'
+          '<radialGradient id="abg" cx="50%%" cy="42%%" r="75%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
+          '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
+          '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1024" height="1024" fill="url(#abg)"/>'
+          '<g transform="translate(162 70)">%s</g>%s</svg>') % (defs, g, wordmark(300, 800, 0.56, 14))
+    (ROOT / "assets/avatar.svg").write_text(av + chr(10), encoding="utf-8", newline=chr(10))
+    defs2, g2 = scorp(560, "so", False)
+    so = ('<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640"><title>Antaryx</title><defs>%s'
+          '<radialGradient id="abg" cx="35%%" cy="45%%" r="85%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
+          '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
+          '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1280" height="640" fill="url(#abg)"/>'
+          '<g transform="translate(40 40)">%s</g>%s'
+          '<text x="640" y="400" font-family="%s" font-size="30" fill="#e6edf3" letter-spacing="1">/  SECURITY.  RESEARCH.  ADAPTATION.</text>'
+          '<text x="640" y="450" font-family="%s" font-size="22" fill="#9aa7b4">hybrid security research node</text></svg>') % (defs2, g2, wordmark(640, 230, 0.78, 14), MONO, MONO)
+    (ROOT / "assets/social-preview.svg").write_text(so + chr(10), encoding="utf-8", newline=chr(10))
+
+
+if __name__ == "__main__":
+    data = live()
+    sizes = {}
+    for th in (DARK, LIGHT):
+        sizes[th["name"]] = build(th, data)
+    art_assets()
+    print("cards written:", len(sizes["dark"]) * 2, "| biggest:", max(sizes["dark"].items(), key=lambda kv: kv[1]))
+    print("data:", {k: (v if not isinstance(v, list) else len(v)) for k, v in data.items()})
