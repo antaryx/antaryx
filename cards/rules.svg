@@ -2,7 +2,7 @@
 <title>rules of engagement</title>
 <defs>
   <style>
-    text { font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+    text { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
     @keyframes tw { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
     @keyframes fade { from { opacity: 0 } }
     @keyframes rise { from { opacity: 0; transform: translateY(10px) } }
@@ -19,12 +19,12 @@
        line drawing, typing and the cursor. A visitor whose browser asks for "no animation at all" used to get a static picture. */
     @media (prefers-reduced-motion: reduce) { .scan, .ripple { animation: none !important } [style*="animation:rise"] { animation-name: fade !important } }
   </style>
-  <linearGradient id="vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a64d8"/><stop offset="1" stop-color="#b9a8ff"/></linearGradient>
-  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d56c9"/><stop offset=".55" stop-color="#8f7fe0"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
-  <radialGradient id="sg"><stop offset="0" stop-color="#d8ccff" stop-opacity=".9"/><stop offset="1" stop-color="#7a64d8" stop-opacity="0"/></radialGradient>
-  <radialGradient id="ag"><stop offset="0" stop-color="#ff3b5c" stop-opacity=".95"/><stop offset="1" stop-color="#ff3b5c" stop-opacity="0"/></radialGradient>
-  <radialGradient id="bg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#150f2b"/><stop offset="1" stop-color="#07050d"/></radialGradient>
-  <linearGradient id="scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9a8ff" stop-opacity="0"/><stop offset=".5" stop-color="#b9a8ff" stop-opacity=".10"/><stop offset="1" stop-color="#b9a8ff" stop-opacity="0"/></linearGradient>
+  <linearGradient id="vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6aa8ff"/><stop offset="1" stop-color="#5ccfe6"/></linearGradient>
+  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#6aa8ff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+  <radialGradient id="sg"><stop offset="0" stop-color="#d7f4fb" stop-opacity=".9"/><stop offset="1" stop-color="#6aa8ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="ag"><stop offset="0" stop-color="#ff6b81" stop-opacity=".95"/><stop offset="1" stop-color="#ff6b81" stop-opacity="0"/></radialGradient>
+  <radialGradient id="bg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#151b21"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>
+  <linearGradient id="scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ccfe6" stop-opacity="0"/><stop offset=".5" stop-color="#5ccfe6" stop-opacity=".10"/><stop offset="1" stop-color="#5ccfe6" stop-opacity="0"/></linearGradient>
   <filter id="glow" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="7"/></filter><clipPath id="rc"><rect x="1" y="1" width="1198" height="94" rx="18"/></clipPath></defs>
-<g clip-path="url(#rc)"><rect x="1" y="1" width="1198" height="94" rx="18" fill="url(#bg)" stroke="#2c2252" stroke-width="2"/><rect class="scan" x="2" y="0" width="1196" height="80" fill="url(#scan)"/><g style="animation:fade .6s ease-out 0.20s backwards"><path d="M165.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#ff3b5c"/><text x="165.0" y="66" font-size="15" fill="#d9d4f2" text-anchor="middle" letter-spacing="1.2">AUTHORIZED TARGETS ONLY</text></g><g style="animation:fade .6s ease-out 0.40s backwards"><path d="M455.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#b9a8ff"/><text x="455.0" y="66" font-size="15" fill="#d9d4f2" text-anchor="middle" letter-spacing="1.2">SCOPE BEFORE SCAN</text></g><g style="animation:fade .6s ease-out 0.60s backwards"><path d="M745.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#b9a8ff"/><text x="745.0" y="66" font-size="15" fill="#d9d4f2" text-anchor="middle" letter-spacing="1.2">EVIDENCE OVER OPINION</text></g><g style="animation:fade .6s ease-out 0.80s backwards"><path d="M1035.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#b9a8ff"/><text x="1035.0" y="66" font-size="15" fill="#d9d4f2" text-anchor="middle" letter-spacing="1.2">REPORT, NEVER WEAPONISE</text></g></g>
+<g clip-path="url(#rc)"><rect x="1" y="1" width="1198" height="94" rx="18" fill="url(#bg)" stroke="#2a3b52" stroke-width="2"/><rect class="scan" x="2" y="0" width="1196" height="80" fill="url(#scan)"/><g style="animation:fade .6s ease-out 0.20s backwards"><path d="M165.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#ff6b81"/><text x="165.0" y="66" font-size="15" fill="#e6edf3" text-anchor="middle" letter-spacing="1.2">AUTHORIZED TARGETS ONLY</text></g><g style="animation:fade .6s ease-out 0.40s backwards"><path d="M455.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#5ccfe6"/><text x="455.0" y="66" font-size="15" fill="#e6edf3" text-anchor="middle" letter-spacing="1.2">SCOPE BEFORE SCAN</text></g><g style="animation:fade .6s ease-out 0.60s backwards"><path d="M745.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#5ccfe6"/><text x="745.0" y="66" font-size="15" fill="#e6edf3" text-anchor="middle" letter-spacing="1.2">EVIDENCE OVER OPINION</text></g><g style="animation:fade .6s ease-out 0.80s backwards"><path d="M1035.0 34 l7 7 l-7 7 l-7 -7 Z" fill="#5ccfe6"/><text x="1035.0" y="66" font-size="15" fill="#e6edf3" text-anchor="middle" letter-spacing="1.2">REPORT, NEVER WEAPONISE</text></g></g>
 </svg>

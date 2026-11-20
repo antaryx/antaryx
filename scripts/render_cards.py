@@ -6,7 +6,7 @@ except CSS/SMIL animation inside <img>). Standard library only.
 
 Live data comes from the public GitHub API (plumbline: version, commit count, weekly commit activity, check counts from its README). If the API
 is unreachable the cards fall back to the last known values below, so the script never produces a broken card.
-Design: violet to silver on near-black with one red star (Antares), the Scorpius constellation of the avatar and banner.
+Design: the Antaryx desktop palette (Base #0b0f12, Blue #6aa8ff, Cyan #5ccfe6, Text #e6edf3) with one red star (Antares), the Scorpius constellation of the avatar and banner.
 Reduced-motion visitors keep the gentle animation (see STYLE). Every base style shows the FINAL picture; animations only start from "hidden" (fill-mode: backwards), so a renderer that ignores animation
 still draws a complete card.
 """
@@ -21,9 +21,9 @@ import urllib.request
 OUT = pathlib.Path(__file__).resolve().parent.parent / "cards"
 OUT.mkdir(parents=True, exist_ok=True)
 
-BG0, BG1, PANEL, EDGE = "#07050d", "#150f2b", "#100b21", "#2c2252"
-VIOLET, LILAC, SILVER, TEXT, DIM, RED = "#7a64d8", "#b9a8ff", "#d9d4f2", "#e7e3f7", "#8a84a8", "#ff3b5c"
-MONO = "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
+BG0, BG1, PANEL, EDGE = "#0b0f12", "#151b21", "#0f1418", "#2a3b52"
+VIOLET, LILAC, SILVER, TEXT, DIM, RED = "#6aa8ff", "#5ccfe6", "#e6edf3", "#e6edf3", "#9aa7b4", "#ff6b81"
+MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
 OWNER = "antaryx"
 
 # ------------------------------------------------------------------ live data (public API, no token)
@@ -97,13 +97,13 @@ STYLE = """
 def svg(w, h, body, title, extra_defs=""):
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s">\n<title>%s</title>\n'
             '<defs>%s\n  <linearGradient id="vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient>\n'
-            '  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d56c9"/><stop offset=".55" stop-color="%s"/><stop offset="1" stop-color="#ffffff"/></linearGradient>\n'
-            '  <radialGradient id="sg"><stop offset="0" stop-color="#d8ccff" stop-opacity=".9"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>\n'
+            '  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="%s"/><stop offset="1" stop-color="#ffffff"/></linearGradient>\n'
+            '  <radialGradient id="sg"><stop offset="0" stop-color="#d7f4fb" stop-opacity=".9"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>\n'
             '  <radialGradient id="ag"><stop offset="0" stop-color="%s" stop-opacity=".95"/><stop offset="1" stop-color="%s" stop-opacity="0"/></radialGradient>\n'
             '  <radialGradient id="bg" cx="50%%" cy="40%%" r="80%%"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></radialGradient>\n'
             '  <linearGradient id="scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="0"/><stop offset=".5" stop-color="%s" stop-opacity=".10"/><stop offset="1" stop-color="%s" stop-opacity="0"/></linearGradient>\n'
             '  <filter id="glow" x="-20%%" y="-40%%" width="140%%" height="180%%"><feGaussianBlur stdDeviation="7"/></filter>%s</defs>%s\n%s\n</svg>\n') % (
-        w, h, w, h, esc(title), esc(title), STYLE, VIOLET, LILAC, "#8f7fe0", VIOLET, RED, RED, BG1, BG0, LILAC, LILAC, LILAC, extra_defs, "", body)
+        w, h, w, h, esc(title), esc(title), STYLE, VIOLET, LILAC, "#6aa8ff", VIOLET, RED, RED, BG1, BG0, LILAC, LILAC, LILAC, extra_defs, "", body)
 
 
 def panel(w, h, rx=22):
@@ -146,7 +146,7 @@ def constellation(x, y, size, star=1.0, draw=True):
             o.append('<circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="url(#sg)"/><path d="M%s %.1f L%.1f %s L%s %.1f L%.1f %s Z" fill="#fff"/>' % (
                 dl, cx, cy, 24 * star, cx, cy - r, cx + r, cy, cx, cy + r, cx - r, cy))
         else:
-            o.append('<circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="url(#sg)"/><circle cx="%s" cy="%s" r="%.1f" fill="#f3eeff"/>' % (
+            o.append('<circle class="tw" style="%s" cx="%s" cy="%s" r="%.1f" fill="url(#sg)"/><circle cx="%s" cy="%s" r="%.1f" fill="#eef6ff"/>' % (
                 dl, cx, cy, 15 * star, cx, cy, 4.2 * star))
     return "".join(o)
 
@@ -162,7 +162,7 @@ def wordmark(x, y, scale, width=13):
         g.append('<path d="%s" transform="translate(%.1f 0)"/>' % (LETTERS[ch], i * 108))
     inner = "".join(g)
     return ('<g transform="translate(%s %s) scale(%.3f)" fill="none" stroke-linejoin="miter" stroke-linecap="butt">'
-            '<g stroke="#8f7fe0" stroke-width="%d" opacity=".55" filter="url(#glow)">%s</g>'
+            '<g stroke="#6aa8ff" stroke-width="%d" opacity=".55" filter="url(#glow)">%s</g>'
             '<g stroke="url(#wm)" stroke-width="%d">%s</g></g>') % (x, y, scale, width + 6, inner, width, inner)
 
 
@@ -191,7 +191,7 @@ def hero():
     body += '<g style="animation:fade 1.2s ease-out backwards">' + constellation(90, 44, 350, 1.35) + "</g>"
     body += '<g style="animation:rise .9s ease-out .6s backwards">' + wordmark(548, 124, 0.8) + "</g>"
     body += '<line x1="550" y1="246" x2="1130" y2="246" stroke="%s" stroke-opacity=".5" stroke-width="1.5"/>' % LILAC
-    body += typed(550, 292, "/  SECURITY.  RESEARCH.  ADAPTATION.", 26, "#cfc8ee", 1.4, 2.6, 'textLength="566" lengthAdjust="spacing"')
+    body += typed(550, 292, "/  SECURITY.  RESEARCH.  ADAPTATION.", 26, "#c4d0dc", 1.4, 2.6, 'textLength="566" lengthAdjust="spacing"')
     body += '<rect class="cur" x="1126" y="270" width="14" height="26" fill="%s"/>' % RED
     body += '<g style="animation:fade 1s ease-out 2.6s backwards"><text x="550" y="340" font-size="17" fill="%s">hybrid security research node</text>' % DIM
     body += '<text x="550" y="368" font-size="17" fill="%s">blue team  <tspan fill="%s">+</tspan>  red team  <tspan fill="%s">//</tspan>  authorized scope only</text></g>' % (DIM, RED, VIOLET)
@@ -206,7 +206,7 @@ def term(w, h, title, lines, cid, total_delay=0.4):
     """lines: (kind, text) kind: p prompt, o output, d dim, r red, k ok"""
     body = '<g clip-path="url(#%s)">' % cid + panel(w, h)
     body += '<rect x="1" y="1" width="%d" height="44" fill="%s"/><line x1="1" y1="45" x2="%d" y2="45" stroke="%s" stroke-width="2"/>' % (w - 2, PANEL, w - 1, EDGE)
-    for i, c in enumerate(("#ff5f67", "#f5c451", "#5fd38d")):
+    for i, c in enumerate(("#ff6b81", "#f2cc60", "#7ee787")):
         body += '<circle cx="%d" cy="23" r="7" fill="%s" opacity=".85"/>' % (30 + i * 24, c)
     body += '<text x="%d" y="29" font-size="15" fill="%s" text-anchor="middle">%s</text>' % (w // 2, DIM, esc(title))
     y, t = 86, total_delay
@@ -215,7 +215,7 @@ def term(w, h, title, lines, cid, total_delay=0.4):
             body += '<text x="34" y="%d" font-size="20" fill="%s" style="animation:fade .01s steps(1) %.2fs backwards"><tspan fill="%s">&gt;_</tspan> %s</text>' % (y, TEXT, t, RED, esc(text))
             t += 0.9
         else:
-            col = {"o": SILVER, "d": DIM, "r": RED, "k": "#7ee7b0"}[kind]
+            col = {"o": SILVER, "d": DIM, "r": RED, "k": "#7ee787"}[kind]
             body += '<text x="34" y="%d" font-size="19" fill="%s" style="animation:fade .4s ease-out %.2fs backwards">%s</text>' % (y, col, t, esc(text))
             t += 0.5
         y += 34

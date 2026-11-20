@@ -1,5 +1,5 @@
 <!-- Every card below is an animated SVG drawn by scripts/render_cards.py (Python standard library, no third-party widget services, no trackers)
-     and refreshed weekly by .github/workflows/update-cards.yml. The scorpion is Scorpius; the red star is Antares.
+     and refreshed weekly by .github/workflows/update-cards.yml. The scorpion is Scorpius; the red star is Antares. Colours: the Antaryx desktop palette.
      Spacing is baked into the SVGs: keep the images of a row on one line with no spaces between them. -->
 <div align="center">
 <img src="./cards/hero.svg" width="100%" alt="ANTARYX. Security. Research. Adaptation. The Scorpius constellation with its red star, Antares." /><br>
@@ -27,7 +27,7 @@
 </div>
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"primaryColor":"#150f2b","primaryTextColor":"#e7e3f7","primaryBorderColor":"#7a64d8","lineColor":"#b9a8ff","secondaryColor":"#150f2b","tertiaryColor":"#07050d","fontFamily":"ui-monospace, Menlo, Consolas, monospace"}}}%%
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#151b21","primaryTextColor":"#e6edf3","primaryBorderColor":"#6aa8ff","lineColor":"#5ccfe6","secondaryColor":"#151b21","tertiaryColor":"#0b0f12","fontFamily":"ui-monospace, Menlo, Consolas, monospace"}}}%%
 flowchart LR
     A(["scope and<br/>authorization"]) --> B["recon"]
     B --> C["hypothesis"]
@@ -36,7 +36,7 @@ flowchart LR
     E --> F["report"]
     F --> G["harden and fix"]
     G -. "what the defence missed" .-> B
-    style A stroke:#ff3b5c,stroke-width:2px
+    style A stroke:#ff6b81,stroke-width:2px
 ```
 
 <div align="center">
