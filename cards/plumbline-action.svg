@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="598" height="260" viewBox="0 0 598 260" role="img" aria-label="plumbline-action">
+<title>plumbline-action</title>
+<defs>
+  <style>
+    text { font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
+    @keyframes tw { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
+    @keyframes fade { from { opacity: 0 } }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+    @keyframes draw { from { stroke-dasharray: var(--l); stroke-dashoffset: var(--l) } to { stroke-dashoffset: 0 } }
+    @keyframes ripple { from { transform: scale(.4); opacity: .9 } to { transform: scale(2.6); opacity: 0 } }
+    @keyframes blink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+    @keyframes scan { from { transform: translateY(-80px) } to { transform: translateY(520px) } }
+    @keyframes type { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+    .tw { animation: tw 3.2s ease-in-out infinite }
+    .cur { animation: blink 1s steps(1) infinite }
+    .ripple { transform-box: fill-box; transform-origin: center; animation: ripple 3.4s ease-out infinite }
+    .scan { animation: scan 9s linear infinite }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }
+  </style>
+  <linearGradient id="vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a64d8"/><stop offset="1" stop-color="#b9a8ff"/></linearGradient>
+  <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d56c9"/><stop offset=".55" stop-color="#8f7fe0"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+  <radialGradient id="sg"><stop offset="0" stop-color="#d8ccff" stop-opacity=".9"/><stop offset="1" stop-color="#7a64d8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="ag"><stop offset="0" stop-color="#ff3b5c" stop-opacity=".95"/><stop offset="1" stop-color="#ff3b5c" stop-opacity="0"/></radialGradient>
+  <radialGradient id="bg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#150f2b"/><stop offset="1" stop-color="#07050d"/></radialGradient>
+  <linearGradient id="scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9a8ff" stop-opacity="0"/><stop offset=".5" stop-color="#b9a8ff" stop-opacity=".10"/><stop offset="1" stop-color="#b9a8ff" stop-opacity="0"/></linearGradient>
+  <filter id="glow" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="7"/></filter><clipPath id="pa"><rect x="1" y="1" width="596" height="258" rx="22"/></clipPath></defs>
+<g clip-path="url(#pa)"><rect x="1" y="1" width="596" height="258" rx="22" fill="url(#bg)" stroke="#2c2252" stroke-width="2"/><rect class="scan" x="2" y="0" width="594" height="80" fill="url(#scan)"/><path d="M30 40 h10 v-10 M30 40 v-12 h10" stroke="#b9a8ff" fill="none" stroke-width="0"/><text x="30" y="54" font-size="26" fill="#e7e3f7" font-weight="bold">plumbline-action</text><circle cx="560" cy="46" r="5" fill="#ff3b5c"/><text x="30" y="92" font-size="16" fill="#d9d4f2">Runs plumbline on a GitHub Actions runner and sends</text><text x="30" y="116" font-size="16" fill="#d9d4f2">the findings to the Security tab as SARIF.</text><rect x="30.0" y="172" width="134.4" height="28" rx="14" fill="none" stroke="#b9a8ff" stroke-opacity=".8"/><text x="97.2" y="191" font-size="14" fill="#b9a8ff" text-anchor="middle">GitHub Actions</text><rect x="174.4" y="172" width="57.0" height="28" rx="14" fill="none" stroke="#b9a8ff" stroke-opacity=".8"/><text x="202.9" y="191" font-size="14" fill="#b9a8ff" text-anchor="middle">SARIF</text><rect x="241.4" y="172" width="91.4" height="28" rx="14" fill="none" stroke="#b9a8ff" stroke-opacity=".8"/><text x="287.1" y="191" font-size="14" fill="#b9a8ff" text-anchor="middle">DevSecOps</text><line x1="30" y1="214" x2="568" y2="214" stroke="#2c2252" stroke-opacity=".5"/><text x="30" y="242" font-size="17" fill="#e7e3f7" font-weight="bold">v2.0.1 <tspan font-size="13" fill="#8a84a8" font-weight="normal">pinned release</tspan></text><text x="246" y="242" font-size="17" fill="#e7e3f7" font-weight="bold">verified <tspan font-size="13" fill="#8a84a8" font-weight="normal">checksum</tspan></text></g>
+</svg>
