@@ -130,9 +130,10 @@ text{font-family:%s}
 @keyframes blink{0%%,49%%{opacity:1}50%%,100%%{opacity:0}}
 @keyframes scan{from{transform:translateY(-90px)}to{transform:translateY(480px)}}
 @keyframes type{from{clip-path:inset(0 100%% 0 0)}to{clip-path:inset(0 0 0 0)}}
-@keyframes segpulse{0%%,62%%,100%%{fill:%s}30%%{fill:%s}}
+@keyframes segpulse{0%%,62%%,100%%{filter:brightness(1)}30%%{filter:brightness(1.9)}}
 @keyframes nodepulse{0%%,9%%,100%%{stroke-opacity:.55;stroke-width:2}3%%{stroke-opacity:1;stroke-width:3.4}}
 @keyframes line{from{stroke-dashoffset:var(--l)}to{stroke-dashoffset:0}}
+@keyframes grow{from{transform:scaleX(0)}}
 .tw{animation:tw 3.4s ease-in-out infinite}
 .cur{animation:blink 1s steps(1) infinite}
 .ripple{transform-box:fill-box;transform-origin:center;animation:ripple 3.4s ease-out infinite}
@@ -141,7 +142,7 @@ text{font-family:%s}
 .np{animation:nodepulse 12s linear infinite}
 /* reduced motion removes the sweeping and sliding movement but keeps the gentle animation: twinkle, fade-in, drawing, typing, the cursor */
 @media (prefers-reduced-motion:reduce){.scan,.ripple{animation:none!important}[style*="animation:rise"]{animation-name:fade!important}}
-</style>""" % (FONTS, MONO, P["plate"], P["plate_hi"])
+</style>""" % (FONTS, MONO)
 
 
 def svg(w, h, body, title, defs=""):
@@ -216,16 +217,16 @@ def typed(x, y, text, size, fill, delay, dur, weight=400):
 
 
 def scorp(size, uid, animate=True):
-    pal = dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"], flat=P["text"])
-    return scorpion.group("neon", size, 22, pal, animate, uid)
+    pal = dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"], flat=P["text"])
+    return scorpion.group("neon", size, 10, pal, animate, uid)
 
 
 # ------------------------------------------------------------------ cards
 def hero(D):
     h = 380
-    defs_sc, g = scorp(350, "sc")
+    defs_sc, g = scorp(376, "sc")
     inner = rain(400, 880, 40, 360) + rain(18, 120, 40, 360, 3)
-    inner += '<g style="animation:fade 1.2s ease-out backwards" transform="translate(18 14)">%s</g>' % g
+    inner += '<g style="animation:fade 1.2s ease-out backwards" transform="translate(8 2)">%s</g>' % g
     inner += '<g style="animation:rise .9s ease-out .6s backwards">%s</g>' % wordmark(400, 92, 0.64)
     inner += '<line x1="402" y1="190" x2="860" y2="190" stroke="%s" stroke-opacity=".55" stroke-width="1.5"/>' % P["cyan"]
     inner += typed(402, 232, "/  SECURITY.  RESEARCH.  ADAPTATION.", 18, P["text"], 1.4, 2.6)
@@ -407,8 +408,8 @@ def footer():
 
 
 def divider():
-    defs, g = scorpion.group("neon", 74, 4, dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"]), False, "dv")
-    inner = '<line x1="30" y1="42" x2="396" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><line x1="504" y1="42" x2="870" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><g transform="translate(413 5)">%s</g>' % g
+    defs, g = scorpion.group("neon", 90, 2, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "dv")
+    inner = '<line x1="30" y1="42" x2="396" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><line x1="504" y1="42" x2="870" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><g transform="translate(405 -3)">%s</g>' % g
     return svg(W, 84, inner, "divider", defs)
 
 
@@ -416,8 +417,8 @@ def starmap(D):
     h = 268
     days = D["days"]
     inner = tw(28, 42, "[ CONSTELLATION // %d contributions in the last year ]" % D["total"], 15, P["cyan"], 600, 'letter-spacing="1"')
-    sdefs, sg = scorpion.group("neon", 230, 6, dict(edge1=P["blue"], edge2=P["cyan"], plate=P["plate"], leg=P["cyan"], star=P["star"], red=P["red"]), False, "sm")
-    inner += '<g opacity=".13" transform="translate(40 30)">%s</g>' % sg
+    sdefs, sg = scorpion.group("neon", 250, 6, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "sm")
+    inner += '<g opacity=".16" transform="translate(30 38)">%s</g>' % sg
     if days:
         weeks = (len(days) + 6) // 7
         first = datetime.date.fromisoformat(days[0][0])
@@ -482,6 +483,90 @@ def lablog():
     return card(W, h, 18, "lg", inner, "lab log")
 
 
+def parse_scan():
+    """the saved output of a real `plumbline scan` (data/plumbline-scan.txt): modules, check rows and the summary numbers"""
+    try:
+        raw = (ROOT / "data/plumbline-scan.txt").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lines = raw.splitlines()
+    meta = [l[2:].strip() for l in lines if l.startswith("# ")]
+    target = next((l[len("TARGET:"):].strip() for l in lines if l.startswith("TARGET:")), "")
+    mods, cur = [], None
+    for l in lines:
+        if l.startswith("[+] "):
+            cur = dict(head=l[4:].strip(), rows=[]); mods.append(cur)
+        elif l.startswith("[=] "):
+            cur = None
+        elif cur is not None:
+            m = re.match(r"^\s+- (.*?)\s+\[ (OK|WARNING|UNKNOWN|SKIPPED|N/A|NOT_APPLICABLE)\s*\]\s*$", l)
+            if m: cur["rows"].append((m.group(1), m.group(2)))
+    num = lambda rx, grp=1: next((m.group(grp) for l in lines for m in [re.search(rx, l)] if m), None)
+    pm = re.search(r"posture\s+([\d.]+)\s+coverage\s+([\d.]+)%", raw)
+    counts = []
+    for i, l in enumerate(lines):
+        if "PASS" in l and "FAIL" in l and "UNKNOWN" in l:
+            counts = [int(x) for x in re.findall(r"\u2502\s*(\d+)\s*\u2502", lines[i + 1])]
+            break
+    if not (mods and pm and len(counts) == 4):
+        return None
+    return dict(meta=meta, target=target, mods=mods, posture=float(pm.group(1)), coverage=float(pm.group(2)), pass_=counts[0], fail=counts[1], unknown=counts[2],
+                skipped=counts[3], na=int(num(r"NOT_APPLICABLE\s+(\d+)") or 0), total=int(num(r"(\d+) checks evaluated") or 0), catalog=int(num(r"catalog (\d+)\s*$") or 0))
+
+
+def replay():
+    S = parse_scan()
+    fs = 14.5
+    if not S:
+        return card(W, 120, 18, "rp", tw(28, 60, "no scan saved: data/plumbline-scan.txt", 15, P["dim"]), "plumbline scan replay")
+    pick = [m for m in S["mods"] if m["head"].split()[0] in ("AUTH", "FILESYS", "KERNEL", "SERVICES", "SSHD")]
+    rows = []
+    for m in pick:
+        rows.append(("head", m["head"].replace("\u00b7", "-")))
+        bad = next(((t, st) for t, st in m["rows"] if st == "WARNING"), None)
+        ok = next(((t, st) for t, st in m["rows"] if st == "OK"), None)
+        unk = next(((t, st) for t, st in m["rows"] if st == "UNKNOWN"), None)
+        for r in (bad, ok if ok else unk):
+            if r: rows.append(("row", r))
+    h = 44 + 62 + len(rows) * 23 + 24 + 230
+    inner = '<rect x="1" y="1" width="%d" height="42" fill="%s"/><line x1="1" y1="43" x2="%d" y2="43" stroke="%s" stroke-width="2"/>' % (W - 2, P["panel"], W - 1, P["edge"])
+    for i, c in enumerate((P["red"], P["yellow"], P["green"])):
+        inner += '<circle cx="%d" cy="22" r="6.5" fill="%s" opacity=".9"/>' % (28 + i * 22, c)
+    inner += tw(W / 2, 27, "plumbline 2.0.1  //  real scan of a stock Ubuntu container", 14, P["dim"], anchor="middle")
+    cmd = "plumbline scan --no-color --redact"
+    inner += '<text x="30" y="80" font-size="%s" fill="%s" style="animation:fade .01s steps(1) .3s backwards"><tspan fill="%s">&gt;_</tspan> sudo %s</text>' % (fs + 1, P["text"], P["red"], esc(cmd))
+    y, t = 112, 1.0
+    for kind, v in rows:
+        if kind == "head":
+            inner += '<text x="30" y="%d" font-size="%s" fill="%s" font-weight="600" style="animation:fade .3s ease-out %.2fs backwards">[+] %s</text>' % (y, fs, P["cyan"], t, esc(v))
+        else:
+            text, st = v
+            text = ascii_clean(text, 70)
+            col = {"OK": P["green"], "WARNING": P["red"], "UNKNOWN": P["yellow"]}.get(st, P["dim"])
+            inner += ('<g style="animation:fade .3s ease-out %.2fs backwards"><text x="46" y="%d" font-size="%s" fill="%s">- %s</text>'
+                      '<text x="%d" y="%d" font-size="%s" fill="%s" font-weight="600" text-anchor="end">[ %s ]</text></g>') % (t, y, fs, P["text"], esc(text), W - 30, y, fs, col, st)
+        y += 23; t += 0.12
+    y += 14
+    inner += '<line x1="30" y1="%d" x2="%d" y2="%d" stroke="%s" stroke-opacity=".6"/>' % (y, W - 30, y, P["edge"])
+    y += 40
+    inner += '<g style="animation:fade .5s ease-out %.2fs backwards">%s%s</g>' % (t, tw(30, y, "posture", 15, P["dim"]), tw(104, y, "%.1f" % S["posture"], 30, P["text"], 600))
+    bw = W - 60 - 250
+    inner += '<rect x="250" y="%d" width="%d" height="16" rx="8" fill="%s" stroke="%s"/>' % (y - 16, bw, P["panel"], P["edge"])
+    inner += '<rect x="250" y="%d" width="%.1f" height="16" rx="8" fill="url(#vio)" style="transform-box:fill-box;transform-origin:left;animation:grow 1.6s ease-out %.2fs backwards"/>' % (y - 16, bw * S["posture"] / 100, t)
+    inner += tw(W - 30, y + 28, "coverage %.1f%% of applicable checks" % S["coverage"], 13, P["dim"], anchor="end")
+    y += 62
+    cw = (W - 60 - 3 * 14) / 4
+    for i, (lab, val, col) in enumerate((("PASS", S["pass_"], P["green"]), ("FAIL", S["fail"], P["red"]), ("UNKNOWN", S["unknown"], P["yellow"]), ("N/A", S["na"], P["dim"]))):
+        x = 30 + i * (cw + 14)
+        inner += ('<g style="animation:rise .5s ease-out %.2fs backwards"><rect x="%.1f" y="%d" width="%.1f" height="62" rx="12" fill="%s" stroke="%s"/>%s%s</g>') % (
+            t + 0.4 + i * 0.15, x, y - 24, cw, P["panel"], col, tw(x + 16, y - 2, lab, 12.5, P["dim"], extra='letter-spacing="1"'), tw(x + 16, y + 26, str(val), 26, col, 600))
+    y += 74
+    inner += tw(30, y, "%d checks evaluated, catalog %d. UNKNOWN is not a pass: the scan could not tell." % (S["total"], S["catalog"]), 13, P["dim"])
+    y += 24
+    inner += tw(30, y, "real output, excerpt chosen by script; target: stock ubuntu:24.04 + openssh-server in a container, not this machine", 12, P["faint"])
+    return card(W, y + 22, 18, "rp", inner, "A real plumbline scan of a stock Ubuntu container: posture %.1f, %d pass, %d fail, %d unknown" % (S["posture"], S["pass_"], S["fail"], S["unknown"]))
+
+
 def build(theme, D):
     global P
     P = theme
@@ -489,12 +574,12 @@ def build(theme, D):
     c = {
         "hero": hero(D), "whoami": whoami(D), "blue": vectors("blue"), "red": vectors("red"),
         "h-log": heading("git log --author=antaryx --stat", "h1"), "h-method": heading("cat /etc/method", "h2"), "h-feed": heading("tail -f /var/feed/kev", "h3"),
-        "h-stars": heading("star-map --contributions", "h4"), "h-lab": heading("cat /var/log/lab.log", "h5"), "h-net": heading("netstat -ano | grep ESTABLISHED", "h6"),
+        "h-stars": heading("star-map --contributions", "h4"), "h-scan": heading("sudo plumbline scan --redact", "h7"), "h-lab": heading("cat /var/log/lab.log", "h5"), "h-net": heading("netstat -ano | grep ESTABLISHED", "h6"),
         "plumbline": repo_card("plumbline", "A deterministic, offline, evidence-first host security auditor for Linux. Hang a line. See what's true.",
                                ["Go", "Linux", "CIS", "SARIF", "Apache-2.0"], [("checks", str(D["checks"])), ("modules", str(D["modules"])), ("network calls", "0"), ("release", D["version"])], "pc"),
         "plumbline-action": repo_card("plumbline-action", "Runs plumbline on a GitHub Actions runner and sends the findings to the Security tab as SARIF.",
                                       ["GitHub Actions", "SARIF", "DevSecOps"], [("pinned release", D["version"]), ("checksum", "verified")], "pa"),
-        "activity": activity(D), "stack": stack(), "method": method(), "rules": rules(), "threat": threat(D), "starmap": starmap(D), "lablog": lablog(),
+        "activity": activity(D), "replay": replay(), "stack": stack(), "method": method(), "rules": rules(), "threat": threat(D), "starmap": starmap(D), "lablog": lablog(),
         "divider": divider(), "footer": footer(),
         "btn-htb": button("HACKTHEBOX", "/users/3514431", "b1"), "btn-thm": button("TRYHACKME", "/p/antaryx", "b2"), "btn-mail": button("SECURE COMM", "antaryx@proton.me", "b3"),
     }
@@ -508,21 +593,21 @@ def art_assets():
     global P
     P = DARK
     (ROOT / "assets").mkdir(exist_ok=True)
-    defs, g = scorp(700, "av", False)
+    defs, g = scorp(820, "av", False)
     av = ('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>Antaryx avatar</title><defs>%s'
           '<radialGradient id="abg" cx="50%%" cy="42%%" r="75%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
           '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
           '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1024" height="1024" fill="url(#abg)"/>'
-          '<g transform="translate(162 70)">%s</g>%s</svg>') % (defs, g, wordmark(300, 800, 0.56, 14))
+          '<g transform="translate(102 50)">%s</g>%s</svg>') % (defs, g, wordmark(300, 806, 0.56, 14))
     (ROOT / "assets/avatar.svg").write_text(av + chr(10), encoding="utf-8", newline=chr(10))
     defs2, g2 = scorp(560, "so", False)
     so = ('<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640"><title>Antaryx</title><defs>%s'
           '<radialGradient id="abg" cx="35%%" cy="45%%" r="85%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
           '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
           '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1280" height="640" fill="url(#abg)"/>'
-          '<g transform="translate(40 40)">%s</g>%s'
-          '<text x="640" y="400" font-family="%s" font-size="30" fill="#e6edf3" letter-spacing="1">/  SECURITY.  RESEARCH.  ADAPTATION.</text>'
-          '<text x="640" y="450" font-family="%s" font-size="22" fill="#9aa7b4">hybrid security research node</text></svg>') % (defs2, g2, wordmark(640, 230, 0.78, 14), MONO, MONO)
+          '<g transform="translate(8 50)">%s</g>%s'
+          '<text x="690" y="400" font-family="%s" font-size="25" fill="#e6edf3" letter-spacing="1">/  SECURITY.  RESEARCH.  ADAPTATION.</text>'
+          '<text x="690" y="446" font-family="%s" font-size="20" fill="#9aa7b4">hybrid security research node</text></svg>') % (defs2, g2, wordmark(690, 232, 0.72, 14), MONO, MONO)
     (ROOT / "assets/social-preview.svg").write_text(so + chr(10), encoding="utf-8", newline=chr(10))
 
 

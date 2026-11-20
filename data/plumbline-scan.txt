@@ -1,0 +1,298 @@
+# plumbline v2.0.1 (linux/amd64): sha256 checked against checksums.txt and the keyless cosign signature verified (identity: antaryx/plumbline release workflow)
+# image: ubuntu@sha256:9c7f200c07e3d4a03e7249d2c16bf66a51120fb876aa2242cf31451412543289
+# command: plumbline scan --no-color --redact   (run as root inside the container; made 2026-11-20 on the Antaryx workstation, nothing of the host is scanned)
+TARGET: Ubuntu 24.04.5 LTS (docker image ubuntu:24.04 + openssh-server sudo cron rsyslog libpam-pwquality, default configuration)
+plumbline 2.0.1   catalog 34
+
+  host     (redacted)   Ubuntu 24.04.5 LTS
+  root     /  (live host)
+  started  2026-11-20 19:56:30 UTC   elapsed 461ms
+  euid     0  (root)
+  profile  default
+
+[+] AUTH  · 6 checks, 3 failing, 1 unknown
+  - A password quality module is enforced                               [ OK ]
+  - Password quality parameters require length and character vari… [ UNKNOWN ]
+  - Repeated authentication failures lock the account              [ WARNING ]
+  - PAM does not accept an empty password                          [ WARNING ]
+  - Passwords are hashed with a strong algorithm                        [ OK ]
+  - Recent passwords cannot be reused                              [ WARNING ]
+
+[+] CONTAINERS  · 8 checks, 8 n/a
+  - The Docker daemon remaps container users to unprivileged host… [ SKIPPED ]
+  - The Docker daemon applies no-new-privileges to containers by … [ SKIPPED ]
+  - The Docker daemon restricts traffic between containers on the… [ SKIPPED ]
+  - The Docker daemon keeps containers running across its own res… [ SKIPPED ]
+  - The Docker daemon does not run with experimental features ena… [ SKIPPED ]
+  - The Docker daemon is not started with an unauthenticated TCP … [ SKIPPED ]
+  - The Docker daemon configuration does not bind an unauthentica… [ SKIPPED ]
+  - The Docker daemon writes container logs to a bounded, retriev… [ SKIPPED ]
+
+[+] CRON  · 5 checks, 2 failing, 1 n/a
+  - The system crontab is owned by root and writable only by root       [ OK ]
+  - The cron drop-in directories are owned by root and writable o…      [ OK ]
+  - Access to crontab is restricted by an allow list               [ WARNING ]
+  - The cron access-control files are owned by root and writable … [ SKIPPED ]
+  - The cron schedule is not readable by unprivileged accounts     [ WARNING ]
+
+[+] FILESYS  · 10 checks, 2 failing
+  - No setuid or setgid executable is writable by group or other        [ OK ]
+  - No setuid or setgid executable outside the system binary dire…      [ OK ]
+  - No file is world-writable                                           [ OK ]
+  - World-writable directories have the sticky bit set                  [ OK ]
+  - No system directory is world-writable                               [ OK ]
+  - No device node exists outside /dev                                  [ OK ]
+  - /tmp is a separate mount with nodev, nosuid and noexec         [ WARNING ]
+  - /dev/shm is mounted with nodev, nosuid and noexec                   [ OK ]
+  - /home is a separate mount with nodev and nosuid                [ WARNING ]
+  - Every uid and gid owning a file resolves to a local account o…      [ OK ]
+
+[+] KERNEL  · 31 checks, 12 failing
+  - Address-space layout randomisation is fully enabled                 [ OK ]
+  - Kernel pointers are not exposed to unprivileged users               [ OK ]
+  - Debugging other processes with ptrace is restricted                 [ OK ]
+  - The kernel ring buffer is not readable by unprivileged users        [ OK ]
+  - Setuid programs do not write core dumps                             [ OK ]
+  - Unprivileged users cannot load BPF programs                         [ OK ]
+  - The running kernel parameters match the configured ones        [ WARNING ]
+  - Reverse-path filtering is enabled on every network interface        [ OK ]
+  - Symlink following is restricted in world-writable directories       [ OK ]
+  - Hardlink creation is restricted to files the user can already…      [ OK ]
+  - Opening another user's FIFO in a shared directory is restrict…      [ OK ]
+  - Opening another user's file in a shared directory is restrict…      [ OK ]
+  - Unprivileged access to performance counters is restricted           [ OK ]
+  - Core dumps are not written to an attacker-influenced location  [ WARNING ]
+  - Source-routed packets are refused on every network interface        [ OK ]
+  - TCP SYN cookies are enabled                                         [ OK ]
+  - BPF hardening is written to the sysctl configuration           [ WARNING ]
+  - Kernel pointer restriction is written to the sysctl configura…      [ OK ]
+  - Kernel ring buffer restriction is written to the sysctl confi… [ WARNING ]
+  - Yama ptrace restriction is written to the sysctl configuration      [ OK ]
+  - The magic SysRq key is disabled in the sysctl configuration    [ WARNING ]
+  - Perf event restriction is written to the sysctl configuration  [ WARNING ]
+  - TCP SYN cookies are written to the sysctl configuration        [ WARNING ]
+  - Reverse-path filtering is written to the sysctl configuration       [ OK ]
+  - Source routing and ICMP redirects are refused in the sysctl c… [ WARNING ]
+  - IPv6 router advertisements are refused in the sysctl configur… [ WARNING ]
+  - Sending ICMP redirects is refused in the sysctl configuration  [ WARNING ]
+  - RFC 1337 TIME-WAIT protection is written to the sysctl config… [ WARNING ]
+  - The setuid core-dump policy is written to the sysctl configur… [ WARNING ]
+  - Hardlink protection is written to the sysctl configuration          [ OK ]
+  - Symlink protection is written to the sysctl configuration           [ OK ]
+
+[+] LOGGING  · 5 checks, 2 failing, 1 n/a
+  - rsyslog creates log files unreadable by other                       [ OK ]
+  - Logs are forwarded to a remote collector                       [ WARNING ]
+  - The systemd journal is stored persistently                          [ OK ]
+  - journald forwards to syslog where rsyslog is present           [ WARNING ]
+  - Remote log forwarding uses a reliable transport                [ SKIPPED ]
+
+[+] MEMORY  · 4 checks
+  - Privileged binaries are position-independent executables            [ OK ]
+  - Privileged binaries use full RELRO                                  [ OK ]
+  - Privileged binaries are built with stack protection                 [ OK ]
+  - Privileged binaries are built with _FORTIFY_SOURCE                  [ OK ]
+
+[+] NETWORK  · 3 checks, 1 failing, 2 n/a
+  - A host-based firewall is configured                            [ WARNING ]
+  - The firewall's default inbound policy denies                   [ SKIPPED ]
+  - Exactly one firewall configuration is in force                 [ SKIPPED ]
+
+[+] SERVICES  · 10 checks, 4 failing, 1 unknown
+  - No cleartext-credential network service is enabled                  [ OK ]
+  - Network discovery and RPC portmapping services are not enabled      [ OK ]
+  - Exactly one time synchronisation daemon is enabled             [ WARNING ]
+  - Every enabled unit resolves to a unit file that exists              [ OK ]
+  - Unit directories and unit files are writable by root alone          [ OK ]
+  - Audited system services set NoNewPrivileges                         [ OK ]
+  - Audited system services run with the system directories read-… [ WARNING ]
+  - Audited system services cannot reach user home directories     [ WARNING ]
+  - AppArmor is enforcing at least one profile                     [ UNKNOWN ]
+  - Audited system services are sandboxed at the strict tier       [ WARNING ]
+
+[+] SSHD  · 19 checks, 1 failing, 17 unknown
+  - Root login over SSH is disabled                                [ UNKNOWN ]
+  - Password authentication over SSH is disabled                   [ UNKNOWN ]
+  - Accounts with empty passwords cannot log in over SSH           [ UNKNOWN ]
+  - X11 forwarding is disabled                                     [ WARNING ]
+  - Authentication attempts per connection are limited             [ UNKNOWN ]
+  - Idle SSH sessions are disconnected                             [ UNKNOWN ]
+  - TCP forwarding is restricted                                   [ UNKNOWN ]
+  - sshd logging is detailed enough to reconstruct access          [ UNKNOWN ]
+  - No deprecated or broken cipher is offered                      [ UNKNOWN ]
+  - No deprecated or truncated MAC is offered                      [ UNKNOWN ]
+  - No deprecated key exchange method is offered                   [ UNKNOWN ]
+  - Per-user .rhosts and .shosts files are ignored                 [ UNKNOWN ]
+  - Host-based authentication is disabled                          [ UNKNOWN ]
+  - Users cannot set arbitrary environment variables at login      [ UNKNOWN ]
+  - Unauthenticated connections are closed promptly                [ UNKNOWN ]
+  - A pre-authentication warning banner is presented               [ UNKNOWN ]
+  - SSH agent forwarding is disabled                               [ UNKNOWN ]
+  - sshd verifies ownership and permissions of user key files      [ UNKNOWN ]
+  - sshd runs the PAM account and session stack                         [ OK ]
+
+[+] USERS  · 11 checks, 1 failing, 3 n/a
+  - Only the root account has uid 0                                     [ OK ]
+  - System accounts have no interactive login shell                     [ OK ]
+  - No account has an empty password                                    [ OK ]
+  - Password hashes use a modern algorithm                         [ SKIPPED ]
+  - No uid or account name is used by more than one entry               [ OK ]
+  - The account database contains no legacy NIS import entries          [ OK ]
+  - Group 0 is confined to root                                         [ OK ]
+  - No gid or group name is used by more than one entry                 [ OK ]
+  - Passwords that can authenticate have a bounded maximum age     [ SKIPPED ]
+  - Passwords that can authenticate have a minimum age set         [ SKIPPED ]
+  - The default minimum password age is at least one day           [ WARNING ]
+
+
+[=] Warnings and suggestions
+──────────────────────────────────────────────────────────────────────────────
+
+  Warnings (28)  ·  a check read the value and it does not meet the requirement
+
+  - [HIGH] PAM does not accept an empty password [AUTH-0004]
+      Details: Remove nullok from every pam_unix.so auth rule, and check for
+               accounts that were relying on it.
+  - [HIGH] BPF hardening is written to the sysctl configuration [KERNEL-0017]
+      Details: Write both parameters to a file in /etc/sysctl.d/ and apply
+               them.
+  - [HIGH] IPv6 router advertisements are refused in the sysctl… [KERNEL-0026]
+      Details: Write net.ipv6.conf.all.accept_ra = 0 and
+               net.ipv6.conf.default.accept_ra = 0 to a file in
+               /etc/sysctl.d/, but confirm this host does not use SLAAC first.
+  - [HIGH] A host-based firewall is configured [NETWORK-0001]
+      Details: Configure a default-deny host firewall that permits only the
+               services this host is meant to offer.
+  - [HIGH] Audited system services run with the system direct… [SERVICES-0007]
+      Details: Set ProtectSystem in a drop-in for each service, starting at
+               full and using ReadWritePaths for what the daemon legitimately
+               writes.
+  - [HIGH] Audited system services cannot reach user home dir… [SERVICES-0008]
+      Details: Set ProtectHome=yes in a drop-in for each service, or tmpfs
+               where the daemon needs the directories to exist.
+  - [MEDIUM] Repeated authentication failures lock the account [AUTH-0003]
+      Details: Add pam_faillock.so to the auth and account stacks and set the
+               threshold in /etc/security/faillock.conf.
+  - [MEDIUM] Access to crontab is restricted by an allow list [CRON-0003]
+      Details: Create /etc/cron.allow listing the accounts that may schedule
+               jobs, and remove /etc/cron.deny.
+  - [MEDIUM] /tmp is a separate mount with nodev, nosuid and n… [FILESYS-0007]
+      Details: Make /tmp a separate filesystem, tmpfs is the simplest, and
+               mount it nodev,nosuid,noexec.
+  - [MEDIUM] The running kernel parameters match the configured… [KERNEL-0007]
+      Details: Reconcile /proc/sys with the sysctl configuration, then apply
+               the files.
+  - [MEDIUM] Core dumps are not written to an attacker-influenc… [KERNEL-0014]
+      Details: Pipe core dumps to an absolute-path handler, or write them to a
+               directory only root can read.
+  - [MEDIUM] Logs are forwarded to a remote collector [LOGGING-0002]
+      Details: Configure a remote destination, using a reliable transport.
+  - [MEDIUM] Exactly one time synchronisation daemon is enabl… [SERVICES-0003]
+      Details: Enable exactly one time synchronisation daemon and mask the
+               rest.
+  - [MEDIUM] Audited system services are sandboxed at the str… [SERVICES-0011]
+      Details: Add ProtectSystem=strict and ProtectHome=yes in a drop-in,
+               after establishing what each service writes.
+  - [MEDIUM] X11 forwarding is disabled [SSHD-0005]
+      Details: Set X11Forwarding no; use a browser or a purpose-built remote
+               desktop where a GUI is genuinely needed.
+  - [LOW] Recent passwords cannot be reused [AUTH-0006]
+      Details: Add pam_pwhistory.so with remember=5 to the password stack,
+               above pam_unix.so.
+  - [LOW] The cron schedule is not readable by unprivileged accou… [CRON-0005]
+      Details: Remove group and other read permission from the crontab and the
+               drop-in directories.
+  - [LOW] /home is a separate mount with nodev and nosuid [FILESYS-0009]
+      Details: Mount /home as its own filesystem with nodev and nosuid;
+               consider noexec only where nobody builds.
+  - [LOW] Kernel ring buffer restriction is written to the sysc… [KERNEL-0019]
+      Details: Write kernel.dmesg_restrict = 1 to a file in /etc/sysctl.d/ and
+               apply it.
+  - [LOW] The magic SysRq key is disabled in the sysctl configu… [KERNEL-0021]
+      Details: Write kernel.sysrq = 0 to a file in /etc/sysctl.d/ and apply
+               it.
+  - [LOW] Perf event restriction is written to the sysctl confi… [KERNEL-0022]
+      Details: Write kernel.perf_event_paranoid = 2 to a file in
+               /etc/sysctl.d/, or 3 on a Debian-family kernel.
+  - [LOW] TCP SYN cookies are written to the sysctl configurati… [KERNEL-0023]
+      Details: Write net.ipv4.tcp_syncookies = 1 to a file in /etc/sysctl.d/.
+  - [LOW] Source routing and ICMP redirects are refused in the … [KERNEL-0025]
+      Details: Write all four keys as 0 to a file in /etc/sysctl.d/.
+  - [LOW] Sending ICMP redirects is refused in the sysctl confi… [KERNEL-0027]
+      Details: Write net.ipv4.conf.all.send_redirects = 0 and
+               net.ipv4.conf.default.send_redirects = 0 to a file in
+               /etc/sysctl.d/.
+  - [LOW] RFC 1337 TIME-WAIT protection is written to the sysct… [KERNEL-0028]
+      Details: Write net.ipv4.tcp_rfc1337 = 1 to a file in /etc/sysctl.d/.
+  - [LOW] The setuid core-dump policy is written to the sysctl … [KERNEL-0029]
+      Details: Write fs.suid_dumpable = 0 to a file in /etc/sysctl.d/, or 2
+               where crash reports for setuid binaries are needed.
+  - [LOW] journald forwards to syslog where rsyslog is present [LOGGING-0004]
+      Details: Set ForwardToSyslog=yes explicitly, or remove rsyslog if it is
+               not being used.
+  - [LOW] The default minimum password age is at least one day [USERS-0012]
+      Details: Set PASS_MIN_DAYS to 1 in /etc/login.defs, and apply it to the
+               accounts that already exist.
+
+  Could not determine (19)  ·  these are not passes
+
+  Each one is a question this scan could not answer, with the reason it
+  could not. Treat them as findings until they are resolved.
+
+  - [UNKNOWN] Password quality parameters require length and char… [AUTH-0002]
+      Details: pam_pwquality.so
+  - [UNKNOWN] AppArmor is enforcing at least one profile [SERVICES-0010]
+      Details: apparmor
+  - [UNKNOWN] Root login over SSH is disabled [SSHD-0002]
+      Details: ambiguous system state
+  - [UNKNOWN] Password authentication over SSH is disabled [SSHD-0003]
+      Details: ambiguous system state
+  - [UNKNOWN] Accounts with empty passwords cannot log in over SSH [SSHD-0004]
+      Details: ambiguous system state
+  - [UNKNOWN] Authentication attempts per connection are limited [SSHD-0006]
+      Details: ambiguous system state
+  - [UNKNOWN] Idle SSH sessions are disconnected [SSHD-0007]
+      Details: ambiguous system state
+  - [UNKNOWN] TCP forwarding is restricted [SSHD-0008]
+      Details: ambiguous system state
+  - [UNKNOWN] sshd logging is detailed enough to reconstruct acce… [SSHD-0009]
+      Details: ambiguous system state
+  - [UNKNOWN] No deprecated or broken cipher is offered [SSHD-0010]
+      Details: ambiguous system state
+  - [UNKNOWN] No deprecated or truncated MAC is offered [SSHD-0011]
+      Details: ambiguous system state
+  - [UNKNOWN] No deprecated key exchange method is offered [SSHD-0012]
+      Details: ambiguous system state
+  - [UNKNOWN] Per-user .rhosts and .shosts files are ignored [SSHD-0013]
+      Details: ambiguous system state
+  - [UNKNOWN] Host-based authentication is disabled [SSHD-0014]
+      Details: ambiguous system state
+  - [UNKNOWN] Users cannot set arbitrary environment variables at… [SSHD-0015]
+      Details: ambiguous system state
+  - [UNKNOWN] Unauthenticated connections are closed promptly [SSHD-0016]
+      Details: ambiguous system state
+  - [UNKNOWN] A pre-authentication warning banner is presented [SSHD-0017]
+      Details: ambiguous system state
+  - [UNKNOWN] SSH agent forwarding is disabled [SSHD-0018]
+      Details: ambiguous system state
+  - [UNKNOWN] sshd verifies ownership and permissions of user key… [SSHD-0019]
+      Details: ambiguous system state
+
+[=] Scan summary
+──────────────────────────────────────────────────────────────────────────────
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ posture   72.5   coverage 80.4% of applicable checks                     │
+  │ ████████████████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░ │
+  ╰──────────────────────────────────────────────────────────────────────────╯
+
+  ╭────────────────╮ ╭────────────────╮ ╭────────────────╮ ╭────────────────╮
+  │ PASS           │ │ FAIL           │ │ UNKNOWN        │ │ SKIPPED        │
+  │ 50             │ │ 28             │ │ 19             │ │ 0              │
+  │                │ │                │ │ not passes     │ │                │
+  ╰────────────────╯ ╰────────────────╯ ╰────────────────╯ ╰────────────────╯
+    NOT_APPLICABLE  15   the subject is not on this host
+    UNKNOWN is not a pass; the scan could not tell
+
+  112 checks evaluated · catalog 34
+
