@@ -7,7 +7,7 @@ Python standard library only (the font subsets are committed in assets/fonts and
 Live, public data (no token): plumbline's version, commits and weekly activity; the contribution calendar (the star map); the newest CISA
 "Known Exploited Vulnerabilities" (the threat feed). If a source is unreachable the card falls back to the last known values, so the script
 never writes a broken card. Everything fetched from outside is reduced to printable ASCII and length-limited before it is drawn.
-Design: the Antaryx desktop palette, the Scorpius scorpion of the avatar, one red star (Antares). Every base style shows the FINAL picture;
+Design: the Antaryx desktop palette, the Antaryx mark (hexagon, lambda, red sting), one red star (Antares). Every base style shows the FINAL picture;
 animations start from "hidden" (fill-mode: backwards), so a renderer that ignores animation still draws a complete card. Reduced motion drops
 the sweeping and sliding movement but keeps the gentle animation (twinkle, fade, drawing, typing).
 """
@@ -25,7 +25,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import scorpion  # noqa: E402
+import mark  # noqa: E402
 
 OUT = ROOT / "cards"
 OUT.mkdir(parents=True, exist_ok=True)
@@ -218,15 +218,15 @@ def typed(x, y, text, size, fill, delay, dur, weight=400):
 
 def scorp(size, uid, animate=True):
     pal = dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"], flat=P["text"])
-    return scorpion.group("neon", size, 10, pal, animate, uid)
+    return mark.group("neon", size, 10, pal, animate, uid)
 
 
 # ------------------------------------------------------------------ cards
 def hero(D):
     h = 380
-    defs_sc, g = scorp(376, "sc")
+    defs_sc, g = scorp(326, "sc")
     inner = rain(400, 880, 40, 360) + rain(18, 120, 40, 360, 3)
-    inner += '<g style="animation:fade 1.2s ease-out backwards" transform="translate(8 2)">%s</g>' % g
+    inner += '<g style="animation:fade 1.2s ease-out backwards" transform="translate(40 26)">%s</g>' % g
     inner += '<g style="animation:rise .9s ease-out .6s backwards">%s</g>' % wordmark(400, 92, 0.64)
     inner += '<line x1="402" y1="190" x2="860" y2="190" stroke="%s" stroke-opacity=".55" stroke-width="1.5"/>' % P["cyan"]
     inner += typed(402, 232, "/  SECURITY.  RESEARCH.  ADAPTATION.", 18, P["text"], 1.4, 2.6)
@@ -408,8 +408,8 @@ def footer():
 
 
 def divider():
-    defs, g = scorpion.group("neon", 90, 2, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "dv")
-    inner = '<line x1="30" y1="42" x2="396" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><line x1="504" y1="42" x2="870" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><g transform="translate(405 -3)">%s</g>' % g
+    defs, g = mark.group("neon", 76, 2, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "dv")
+    inner = '<line x1="30" y1="42" x2="396" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><line x1="504" y1="42" x2="870" y2="42" stroke="url(#vio)" stroke-opacity=".6"/><g transform="translate(412 4)">%s</g>' % g
     return svg(W, 84, inner, "divider", defs)
 
 
@@ -417,8 +417,8 @@ def starmap(D):
     h = 268
     days = D["days"]
     inner = tw(28, 42, "[ CONSTELLATION // %d contributions in the last year ]" % D["total"], 15, P["cyan"], 600, 'letter-spacing="1"')
-    sdefs, sg = scorpion.group("neon", 250, 6, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "sm")
-    inner += '<g opacity=".16" transform="translate(30 38)">%s</g>' % sg
+    sdefs, sg = mark.group("neon", 185, 6, dict(edge1=P["blue"], edge2=P["cyan"], red=P["red"]), False, "sm")
+    inner += '<g opacity=".16" transform="translate(62 54)">%s</g>' % sg
     if days:
         weeks = (len(days) + 6) // 7
         first = datetime.date.fromisoformat(days[0][0])
@@ -593,19 +593,19 @@ def art_assets():
     global P
     P = DARK
     (ROOT / "assets").mkdir(exist_ok=True)
-    defs, g = scorp(820, "av", False)
+    defs, g = scorp(760, "av", False)
     av = ('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>Antaryx avatar</title><defs>%s'
           '<radialGradient id="abg" cx="50%%" cy="42%%" r="75%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
           '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
           '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1024" height="1024" fill="url(#abg)"/>'
-          '<g transform="translate(102 50)">%s</g>%s</svg>') % (defs, g, wordmark(300, 806, 0.56, 14))
+          '<g transform="translate(132 20)">%s</g>%s</svg>') % (defs, g, wordmark(300, 856, 0.56, 14))
     (ROOT / "assets/avatar.svg").write_text(av + chr(10), encoding="utf-8", newline=chr(10))
-    defs2, g2 = scorp(560, "so", False)
+    defs2, g2 = scorp(600, "so", False)
     so = ('<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640"><title>Antaryx</title><defs>%s'
           '<radialGradient id="abg" cx="35%%" cy="45%%" r="85%%"><stop offset="0" stop-color="#1c242b"/><stop offset="1" stop-color="#0b0f12"/></radialGradient>'
           '<linearGradient id="wm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a98f0"/><stop offset=".55" stop-color="#5ccfe6"/><stop offset="1" stop-color="#ffffff"/></linearGradient>'
           '<filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><rect width="1280" height="640" fill="url(#abg)"/>'
-          '<g transform="translate(8 50)">%s</g>%s'
+          '<g transform="translate(40 20)">%s</g>%s'
           '<text x="690" y="400" font-family="%s" font-size="25" fill="#e6edf3" letter-spacing="1">/  SECURITY.  RESEARCH.  ADAPTATION.</text>'
           '<text x="690" y="446" font-family="%s" font-size="20" fill="#9aa7b4">hybrid security research node</text></svg>') % (defs2, g2, wordmark(690, 232, 0.72, 14), MONO, MONO)
     (ROOT / "assets/social-preview.svg").write_text(so + chr(10), encoding="utf-8", newline=chr(10))

@@ -1,8 +1,8 @@
 <!-- Every card below is an animated SVG drawn by scripts/render_cards.py (Python standard library; no third-party widget services, no trackers, no
-     JavaScript) and redrawn daily by .github/workflows/update-cards.yml. Dark and light variants come as <picture> pairs. The scorpion is Scorpius;
-     the red star is Antares. Colours: the Antaryx desktop palette. Spacing is baked into the SVGs: keep the images of a row on one line, no spaces. -->
+     JavaScript) and redrawn daily by .github/workflows/update-cards.yml. Dark and light variants come as <picture> pairs. The mark is the wordmark's lambda inside a
+     hexagon, its right leg breaking out as the red sting; the red star is Antares (the heart of Scorpius). Colours: the Antaryx desktop palette. Spacing is baked into the SVGs: keep the images of a row on one line, no spaces. -->
 <div align="center">
-<picture><source media="(prefers-color-scheme: light)" srcset="./cards/hero-light.svg"><img src="./cards/hero.svg" width="100%" alt="ANTARYX. Security. Research. Adaptation. A scorpion built from the Scorpius constellation, with its red star, Antares." /></picture><br>
+<picture><source media="(prefers-color-scheme: light)" srcset="./cards/hero-light.svg"><img src="./cards/hero.svg" width="100%" alt="ANTARYX. Security. Research. Adaptation. The Antaryx mark: a lambda inside a hexagon, one leg breaking out as a red sting, and the red star Antares." /></picture><br>
 <picture><source media="(prefers-color-scheme: light)" srcset="./cards/whoami-light.svg"><img src="./cards/whoami.svg" width="100%" alt="A terminal: whoami, the mission, the rules of engagement and a plumbline scan." /></picture><br>
 <picture><source media="(prefers-color-scheme: light)" srcset="./cards/blue-light.svg"><img src="./cards/blue.svg" width="49.5%" alt="Defense vectors, blue team: anomaly detection, forensic architecture, system hardening." /></picture><picture><source media="(prefers-color-scheme: light)" srcset="./cards/red-light.svg"><img src="./cards/red.svg" width="49.5%" alt="Offense vectors, red team: vulnerability research, payload engineering, stealth operations. Scope-gated, authorized targets only." /></picture><br>
 <picture><source media="(prefers-color-scheme: light)" srcset="./cards/divider-light.svg"><img src="./cards/divider.svg" width="100%" alt="" /></picture>
