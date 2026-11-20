@@ -7,7 +7,7 @@ except CSS/SMIL animation inside <img>). Standard library only.
 Live data comes from the public GitHub API (plumbline: version, commit count, weekly commit activity, check counts from its README). If the API
 is unreachable the cards fall back to the last known values below, so the script never produces a broken card.
 Design: violet to silver on near-black with one red star (Antares), the Scorpius constellation of the avatar and banner.
-Every base style shows the FINAL picture; animations only start from "hidden" (fill-mode: backwards), so a renderer that ignores animation
+Reduced-motion visitors keep the gentle animation (see STYLE). Every base style shows the FINAL picture; animations only start from "hidden" (fill-mode: backwards), so a renderer that ignores animation
 still draws a complete card.
 """
 import html
@@ -88,7 +88,9 @@ STYLE = """
     .cur { animation: blink 1s steps(1) infinite }
     .ripple { transform-box: fill-box; transform-origin: center; animation: ripple 3.4s ease-out infinite }
     .scan { animation: scan 9s linear infinite }
-    @media (prefers-reduced-motion: reduce) { * { animation: none !important } }
+    /* reduced motion removes the sweeping and sliding movement (scan bar, ripples, slide-up) but keeps the gentle animation: twinkle, fade-in,
+       line drawing, typing and the cursor. A visitor whose browser asks for "no animation at all" used to get a static picture. */
+    @media (prefers-reduced-motion: reduce) { .scan, .ripple { animation: none !important } [style*="animation:rise"] { animation-name: fade !important } }
   </style>""" % MONO
 
 
